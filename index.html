@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Telink BLE OTA Flasher</title>
+  <meta name="description" content="Flash custom (pvvx / ATC), Zigbee or original firmware to Telink based Xiaomi, Qingping and Tuya BLE thermometers from the browser, activate Mi devices and configure the custom firmware.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f6fde">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script>
+    // Apply the saved theme before first paint.
+    try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script type="module" src="assets/js/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M11 10.5l10 9-5 4.5V8l5 4.5-10 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand-name">Telink BLE OTA Flasher</span>
+      <span class="badge" id="app-version"></span>
+    </div>
+    <nav class="topnav">
+      <details class="menu">
+        <summary>Tools</summary>
+        <div class="menu-list">
+          <span class="menu-head">Live data</span>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphAtc.html" target="_blank" rel="noopener">Graph (ATC) 1</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphAtc1.html" target="_blank" rel="noopener">Graph (ATC) 2</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphAtc2.html" target="_blank" rel="noopener">Graph (ATC) 3</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/DevPoint.html" target="_blank" rel="noopener">Dev Point</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/Advertising.html" target="_blank" rel="noopener">Advertising</a>
+          <span class="menu-head">Stored data</span>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphMemo.html" target="_blank" rel="noopener">Memo graph</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphMemoOriginal.html" target="_blank" rel="noopener">LYWSD03MMC memo graph</a>
+          <span class="menu-head">Other flashers</span>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/TelinkOTA.html" target="_blank" rel="noopener">SDK Telink OTA</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/ZigbeeTlcIdxOTA.html" target="_blank" rel="noopener">ZigbeeTLc index OTA</a>
+          <a href="https://pvvx.github.io/ATC_MiThermometer/USBCOMFlashTx.html" target="_blank" rel="noopener">USB-COM (UART) flasher</a>
+          <a href="https://pvvx.github.io/THB2/web/PHY62x2BTHome.html" target="_blank" rel="noopener">PHY62x2 (THB) flasher</a>
+        </div>
+      </details>
+      <a class="navlink" href="https://github.com/pvvx/ATC_MiThermometer" target="_blank" rel="noopener">Firmware project</a>
+      <button type="button" class="icon-btn" id="theme-toggle" data-action="toggleTheme" aria-label="Toggle theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <div class="col-main">
+      <div id="support-banner" class="banner" role="alert" hidden></div>
+
+      <!-- Device / connection -->
+      <section class="card" id="card-connection" aria-labelledby="h-device">
+        <div class="card-head">
+          <h2 id="h-device"><span class="step">1</span> Device</h2>
+          <span id="conn-badge" class="pill">Disconnected</span>
+        </div>
+        <label class="field" for="namePrefix">
+          <span>Name filter <small>comma-separated prefixes · empty shows every device</small></span>
+          <input type="text" id="namePrefix" placeholder="e.g. ATC,LYWSD03" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="chips" id="prefix-chips" aria-label="Quick filters"></div>
+        <label class="check" title="Requires chrome://flags/#enable-experimental-web-platform-features">
+          <input type="checkbox" id="advmac">
+          <span>Read advertising data (MAC) before connecting <small class="muted">experimental, needs <code>chrome://flags/#enable-experimental-web-platform-features</code></small></span>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-connect" data-action="connect">Connect</button>
+          <button type="button" class="btn" id="btn-reconnect" data-action="reconnect" disabled>Reconnect</button>
+          <button type="button" class="btn" id="btn-disconnect" data-action="disconnect" disabled>Disconnect</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <dl id="device-info" class="device-info" hidden></dl>
+        <div id="live" class="live" hidden aria-live="off"></div>
+        <div id="miclock" class="miclock" hidden>
+          <span>Device clock: <b id="miclk">?</b></span>
+          <button type="button" class="btn small" data-action="getMiClock">Read</button>
+          <button type="button" class="btn small" data-action="setMiClock">Set to this computer's time</button>
+        </div>
+      </section>
+
+      <!-- Firmware -->
+      <section class="card" id="card-firmware" aria-labelledby="h-fw" hidden>
+        <div class="card-head">
+          <h2 id="h-fw"><span class="step">2</span> Firmware</h2>
+          <span id="fw-index" class="muted small"></span>
+        </div>
+        <div id="fw-hint" class="callout callout-warn" hidden></div>
+        <div id="fw-options"></div>
+        <div class="dropzone" id="fw-drop">
+          <input type="file" id="file" accept=".bin,.zigbee" hidden>
+          <p><b>Local file:</b> drop a <code>.bin</code> / <code>.zigbee</code> file here or
+            <button type="button" class="link" data-action="pickFile">browse…</button></p>
+          <div class="input-group">
+            <input type="url" id="fw-url" placeholder="…or paste an https:// link to a firmware file" autocomplete="off" spellcheck="false" data-enter="loadUrl">
+            <button type="button" class="btn" data-action="loadUrl">Load</button>
+          </div>
+        </div>
+        <div id="fw-selected" class="fw-selected" hidden>
+          <div id="fw-meta" class="fw-meta"></div>
+          <div class="actions">
+            <button type="button" class="btn primary big" id="btn-flash" data-action="startDFU">Start flashing</button>
+            <button type="button" class="btn ghost" data-action="clearFirmware">Clear</button>
+          </div>
+        </div>
+        <div id="fw-progress" class="progress-wrap" hidden>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="fw-bar"></div></div>
+          <div class="progress-meta">
+            <b id="fw-pct">0%</b><span id="fw-blocks"></span><span id="fw-speed"></span><span id="fw-eta"></span>
+            <button type="button" class="btn small danger only-flashing" data-action="abortOta">Abort</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Device specific panel (Mi activation / custom firmware settings) -->
+      <section class="card" id="card-device" aria-labelledby="h-settings" hidden>
+        <div class="card-head">
+          <h2 id="h-settings"><span class="step">3</span> Activation &amp; settings</h2>
+        </div>
+        <div id="custcfg"></div>
+      </section>
+
+      <!-- Help -->
+      <section class="card help" aria-labelledby="h-help">
+        <details>
+          <summary><h2 id="h-help">How to use</h2></summary>
+          <ol class="howto">
+            <li><b>Connect</b> – press <i>Connect</i> and pick your thermometer. Wake it up (press a button or remove/insert the battery) if it does not show up.</li>
+            <li><b>Stock Xiaomi / Qingping firmware</b> – press <i>Do activation</i> first. This registers the device with this browser (as the Mi Home app would) and shows the <b>token</b> and <b>bind key</b>. Devices locked to newer stock firmware need a token from the Xiaomi cloud and <i>Login with token</i>.</li>
+            <li><b>Choose a firmware</b> – load the recommended <i>Custom firmware</i> (or Zigbee / original) or a local file, then press <i>Start flashing</i>. Keep the page open and the device near the computer; it reboots when done.</li>
+            <li><b>Configure</b> – reconnect after flashing to change advertising format (BTHome, PVVX, ATC, Mi), intervals, display options, calibration and more.</li>
+          </ol>
+          <p class="muted small">Works in Chrome, Edge and Opera (desktop and Android) over HTTPS. A failed or aborted transfer leaves the current firmware in place; just try again. Flashing third-party firmware is at your own risk.</p>
+        </details>
+      </section>
+
+      <footer class="footer">
+        Based on <a href="https://github.com/pvvx/ATC_MiThermometer" target="_blank" rel="noopener">pvvx/ATC_MiThermometer</a> TelinkMiFlasher
+        and <a href="https://github.com/atc1441/ATC_MiThermometer" target="_blank" rel="noopener">atc1441</a>'s original flasher.
+        Firmware is downloaded from the upstream repositories.
+      </footer>
+    </div>
+
+    <!-- Log -->
+    <aside class="col-log" aria-labelledby="h-log">
+      <section class="card log-card">
+        <div class="card-head">
+          <h2 id="h-log">Log <span class="count" id="log-count">0</span></h2>
+          <div class="log-tools">
+            <label class="check small" title="Show protocol details"><input type="checkbox" id="log-verbose"><span>Verbose</span></label>
+            <button type="button" class="btn small ghost" data-action="copyLog" title="Copy log">Copy</button>
+            <button type="button" class="btn small ghost" data-action="downloadLog" title="Download log">Save</button>
+            <button type="button" class="btn small ghost" data-action="clearLog" title="Clear log">Clear</button>
+          </div>
+        </div>
+        <div id="log" class="log hide-debug"><div id="log-list" class="log-list" role="log" aria-live="polite"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog" class="dialog-inner">
+      <h3 id="dialog-title"></h3>
+      <div id="dialog-body"></div>
+      <div class="actions end">
+        <button type="button" class="btn" id="dialog-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="dialog-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>

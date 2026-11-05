@@ -1,0 +1,11 @@
+{
+  "name": "telink-ota-flasher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web Bluetooth flasher and configurator for Telink based BLE thermometers (static site for GitHub Pages).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "serve": "python -m http.server 8080"
+  }
+}
