@@ -23,6 +23,37 @@ export const SOURCES = {
   tokenExtractor: 'https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor',
 };
 
+/** Pages of this site (shared top navigation). */
+export const NAV = [
+  { id: 'flasher', href: 'index.html', label: 'Flasher', title: 'Flash firmware, activate and configure devices' },
+  { id: 'live', href: 'live.html', label: 'Live data', title: 'Live temperature / humidity chart' },
+  { id: 'history', href: 'history.html', label: 'History', title: 'Read the measurement history stored on the device' },
+  { id: 'ota', href: 'ota.html', label: 'OTA', title: 'Generic Telink BLE OTA with custom UUIDs' },
+  { id: 'uart', href: 'uart.html', label: 'UART flasher', title: 'Wired flashing through a USB-UART adapter (SWire)' },
+];
+
+/** pvvx's other tools that are not part of this site ("More" menu). */
+export const EXTERNAL_TOOLS = [
+  [
+    'Other tools by pvvx',
+    [
+      ['Advertising decoder', 'https://pvvx.github.io/ATC_MiThermometer/Advertising.html'],
+      ['ZigbeeTLc index OTA', 'https://pvvx.github.io/ATC_MiThermometer/ZigbeeTlcIdxOTA.html'],
+      ['Debug flash reader', 'https://pvvx.github.io/ATC_MiThermometer/DebugFlashRead.html'],
+      ['PHY62x2 (THB) flasher', 'https://pvvx.github.io/THB2/web/PHY62x2BTHome.html'],
+    ],
+  ],
+  [
+    'Reference',
+    [
+      ['Power consumption (custom fw)', 'https://pvvx.github.io/ATC_MiThermometer/CustPower.html'],
+      ['Power consumption (original fw)', 'https://pvvx.github.io/ATC_MiThermometer/OriginalPower.html'],
+      ['Firmware project (GitHub)', 'https://github.com/pvvx/ATC_MiThermometer'],
+      ['ZigbeeTLc project (GitHub)', 'https://github.com/pvvx/ZigbeeTLc'],
+    ],
+  ],
+];
+
 /** Network timeout for downloads (firmware index, binaries, signature files). */
 export const FETCH_TIMEOUT_MS = 15000;
 

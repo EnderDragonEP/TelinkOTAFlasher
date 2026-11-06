@@ -16,38 +16,7 @@
   <script type="module" src="assets/js/main.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M11 10.5l10 9-5 4.5V8l5 4.5-10 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="brand-name">Telink BLE OTA Flasher</span>
-      <span class="badge" id="app-version"></span>
-    </div>
-    <nav class="topnav">
-      <details class="menu">
-        <summary>Tools</summary>
-        <div class="menu-list">
-          <span class="menu-head">Live data</span>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphAtc.html" target="_blank" rel="noopener">Graph (ATC) 1</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphAtc1.html" target="_blank" rel="noopener">Graph (ATC) 2</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphAtc2.html" target="_blank" rel="noopener">Graph (ATC) 3</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/DevPoint.html" target="_blank" rel="noopener">Dev Point</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/Advertising.html" target="_blank" rel="noopener">Advertising</a>
-          <span class="menu-head">Stored data</span>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphMemo.html" target="_blank" rel="noopener">Memo graph</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/GraphMemoOriginal.html" target="_blank" rel="noopener">LYWSD03MMC memo graph</a>
-          <span class="menu-head">Other flashers</span>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/TelinkOTA.html" target="_blank" rel="noopener">SDK Telink OTA</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/ZigbeeTlcIdxOTA.html" target="_blank" rel="noopener">ZigbeeTLc index OTA</a>
-          <a href="https://pvvx.github.io/ATC_MiThermometer/USBCOMFlashTx.html" target="_blank" rel="noopener">USB-COM (UART) flasher</a>
-          <a href="https://pvvx.github.io/THB2/web/PHY62x2BTHome.html" target="_blank" rel="noopener">PHY62x2 (THB) flasher</a>
-        </div>
-      </details>
-      <a class="navlink" href="https://github.com/pvvx/ATC_MiThermometer" target="_blank" rel="noopener">Firmware project</a>
-      <button type="button" class="icon-btn" id="theme-toggle" data-action="toggleTheme" aria-label="Toggle theme">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
-      </button>
-    </nav>
-  </header>
+  <header id="site-header" class="topbar"></header>
 
   <main class="layout">
     <div class="col-main">

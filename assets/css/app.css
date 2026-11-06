@@ -20,6 +20,13 @@
   --danger-soft: #fdeaea;
   --focus: #0f6fde66;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+  /* chart tokens (validated categorical slots 1-2 of the dataviz reference palette) */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-faint: rgba(42, 120, 214, 0.5);
+  --chart-band: rgba(42, 120, 214, 0.13);
+  --chart-grid: #e8ebef;
+  --chart-axis: #6b7885;
   --radius: 12px;
   --radius-sm: 8px;
   --mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, Consolas, monospace;
@@ -48,6 +55,12 @@
     --danger-soft: #331718;
     --focus: #4b9bff80;
     --shadow: 0 1px 2px rgb(0 0 0 / 40%);
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-faint: rgba(57, 135, 229, 0.55);
+    --chart-band: rgba(57, 135, 229, 0.16);
+    --chart-grid: #26313c;
+    --chart-axis: #8795a3;
     color-scheme: dark;
   }
 }
@@ -71,6 +84,12 @@
   --danger-soft: #331718;
   --focus: #4b9bff80;
   --shadow: 0 1px 2px rgb(0 0 0 / 40%);
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-faint: rgba(57, 135, 229, 0.55);
+  --chart-band: rgba(57, 135, 229, 0.16);
+  --chart-grid: #26313c;
+  --chart-axis: #8795a3;
   color-scheme: dark;
 }
 
@@ -177,15 +196,61 @@ small {
   align-items: center;
   gap: 6px;
 }
-.navlink {
-  padding: 6px 10px;
+.brand {
+  text-decoration: none;
+  color: var(--text);
+}
+.topbar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.topnav {
+  min-width: 0;
+}
+.navtabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.navtabs::-webkit-scrollbar {
+  display: none;
+}
+.navtab {
+  padding: 6px 11px;
   border-radius: var(--radius-sm);
   text-decoration: none;
   color: var(--text-2);
+  font-weight: 550;
+  font-size: 0.92rem;
+  white-space: nowrap;
 }
-.navlink:hover {
+.navtab:hover {
   background: var(--surface-2);
   color: var(--text);
+}
+.navtab.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.menu-list .menu-pages {
+  display: none;
+}
+.menu-list a.menu-pages.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  .menu-list .menu-pages {
+    display: block;
+  }
+  .topnav {
+    order: 3;
+    width: 100%;
+  }
+  .navtabs {
+    flex: 1;
+  }
 }
 .icon-btn {
   display: grid;
@@ -241,6 +306,7 @@ small {
   box-shadow: 0 10px 30px rgb(0 0 0 / 18%);
 }
 .menu-list a {
+  white-space: nowrap;
   padding: 6px 10px;
   border-radius: 6px;
   text-decoration: none;
@@ -276,7 +342,7 @@ small {
 }
 .col-log {
   position: sticky;
-  top: 72px;
+  top: 76px;
   min-width: 0;
 }
 @media (max-width: 520px) {
@@ -294,9 +360,6 @@ small {
   }
   .col-log {
     position: static;
-  }
-  .navlink {
-    display: none;
   }
 }
 
@@ -957,6 +1020,117 @@ body.is-flashing #card-device {
   width: 56px;
   font-size: 0.82rem;
   color: var(--muted);
+}
+
+/* ---------- Charts (uPlot) ---------- */
+.chart-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.chart-panel {
+  margin: 0;
+  min-width: 0;
+}
+.chart-empty {
+  margin: 0;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.chart-panel figcaption {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.chart-unit {
+  font-weight: 400;
+  color: var(--muted);
+}
+.chart-host {
+  min-width: 0;
+  overflow: hidden;
+}
+.chart-options {
+  margin-top: -4px;
+}
+.uplot,
+.uplot * {
+  font-family: var(--sans);
+}
+.uplot .u-legend {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  text-align: left;
+  margin: 2px 0 0;
+}
+.uplot .u-legend .u-marker {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+}
+.uplot .u-legend th {
+  font-weight: 500;
+}
+.uplot .u-legend td {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.uplot .u-select {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.uplot .u-cursor-x,
+.uplot .u-cursor-y {
+  border-color: var(--muted) !important;
+}
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+.stats-table th,
+.stats-table td {
+  text-align: right;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.stats-table th:first-child {
+  text-align: left;
+}
+.stats-table thead th {
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.warn-text {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* ---------- UART wiring ---------- */
+.wiring {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pin {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 /* ---------- Log ---------- */
