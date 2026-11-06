@@ -13,7 +13,8 @@ is no build step, and it deploys as a static site to GitHub Pages.
 
 | Page | What it does | Replaces pvvx's |
 | --- | --- | --- |
-| **Flasher** (`index.html`) | OTA flashing, Mi activation / login, custom firmware settings | TelinkMiFlasher |
+| **Flasher** (`index.html`) | OTA flashing, Mi activation / login | TelinkMiFlasher (flashing part) |
+| **Settings** (`settings.html`) | configuration of pvvx custom, ATC1441 and ZigbeeTLc (BLE mode) firmware | TelinkMiFlasher (settings part) |
 | **Live data** (`live.html`) | live temperature, humidity, dew point and battery charts, CSV export; can show the dew point on the device screen | GraphAtc 1–3, DevPoint |
 | **History** (`history.html`) | reads the measurement log stored on the device (custom firmware, or the hourly log of stock LYWSD03MMC), charts, min/avg/max and CSV | GraphMemo, GraphMemoOriginal |
 | **OTA** (`ota.html`) | generic Telink SDK OTA with configurable service / characteristic UUIDs | TelinkOTA |
@@ -29,10 +30,10 @@ measurements) are linked from the **More** menu.
   Shows a progress bar with speed and time left, keeps the screen awake, and asks for confirmation.
 - **Mi Home activation** (registration) to obtain a device's token and bind key, and **login with
   a token** for devices whose stock firmware requires Mi Home registration first.
-- **Full settings for the custom firmware**: advertising format (BTHome / PVVX / ATC / Mi),
+- **Full settings for the custom firmware** (Settings page): advertising format (BTHome / PVVX / ATC / Mi),
   intervals, TX power, screen options, calibration, comfort zone, GPIO trigger, reed switch,
   clock, measurement history (CSV export), PIN code, device name, MAC, bind key, SCD41 CO₂ sensor
-  and a raw command console. ZigbeeTLc (BLE mode), ATC1441 and Qingping devices are supported too.
+  and a raw command console. ZigbeeTLc (BLE mode) and ATC1441 devices are supported too.
 - Light and dark themes, phone-friendly layout, and an exportable log with an optional verbose mode.
 
 The protocol code is a faithful port of the original pages. It was verified against them with a
@@ -51,7 +52,7 @@ Open the page in **Chrome, Edge or Opera** (desktop or Android) over HTTPS. On i
    [Xiaomi Cloud Tokens Extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor),
    then enter it and press **Login with token**.
 3. Load a firmware and press **Start flashing**.
-4. Reconnect to configure the custom firmware.
+4. Open **Settings** and connect again to configure the custom firmware.
 
 ## Deploy on GitHub Pages
 
@@ -73,11 +74,12 @@ Web Bluetooth needs a secure context; `http://localhost` qualifies.
 
 | Path | Contents |
 | --- | --- |
-| `index.html`, `live.html`, `history.html`, `ota.html`, `uart.html` | pages |
+| `index.html`, `settings.html`, `live.html`, `history.html`, `ota.html`, `uart.html` | pages |
 | `assets/css/app.css` | styles (light / dark themes) |
 | `assets/js/site.js` | shared header, navigation, theme, log and name filter |
 | `assets/js/pages/` | entry modules of the tool pages |
-| `assets/js/connection.js` | device chooser, service discovery, retries |
+| `assets/js/main.js` | entry module of the Flasher and Settings pages (they share the connection code) |
+| `assets/js/connection.js` | device chooser, service discovery, retries, per-page routing |
 | `assets/js/mi.js` | Mi activation / login protocol |
 | `assets/js/custom.js`, `settings.js` | custom firmware protocol and settings UI |
 | `assets/js/firmware.js`, `ota.js`, `flasher.js`, `progress.js` | image validation, signing, OTA transfer, firmware card, progress |
