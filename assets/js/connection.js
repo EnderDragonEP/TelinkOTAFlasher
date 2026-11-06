@@ -341,7 +341,7 @@ async function setup(sid) {
       fwType = 'Test firmware';
       log.info('Detected Test device');
       setStatus('Detected Test device', { kind: 'warn' });
-      renderCommandPanel({ title: 'Test firmware', link: { text: 'TelinkOTA ↗', href: SOURCES.tools + 'TelinkOTA.html' } });
+      renderCommandPanel({ title: 'Test firmware', link: { text: 'Generic OTA ↗', href: 'ota.html' } });
       updateButtons();
       await getTestCharacteristic();
     } else {

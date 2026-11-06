@@ -8,7 +8,6 @@ import { hex, bytesToHex, dump, macFromLE, isoDateTime, parseHex } from './util.
 import { HW_VERSION_STR, ID_SENSOR_STR } from './tables.js';
 import { renderFirmwarePanel, onExtOtaStatus } from './flasher.js';
 import { CustomConfig, zbdeviceConfig, UpdExt, UpdTrg, UpdCmf, addMenuSensors, getSensSCD4x, renderMemoActions, renderAtc1441Panel } from './settings.js';
-import { SOURCES } from './config.js';
 
 export const hwName = (id) => (id != null && id < HW_VERSION_STR.length ? HW_VERSION_STR[id] : `Unknown or DIY (${id})`);
 
@@ -40,8 +39,8 @@ export async function sendCustomSetting(data) {
 }
 
 const altFirmwareHint = () => {
-  log.warn('Detected alternative firmware? Use:', SOURCES.tools + 'TelinkOTA.html');
-  setStatus('Detected alternative firmware?', { kind: 'warn', link: { text: 'TelinkOTA', href: SOURCES.tools + 'TelinkOTA.html' } });
+  log.warn('Detected alternative firmware? Use the Generic OTA page (ota.html).');
+  setStatus('Detected alternative firmware?', { kind: 'warn', link: { text: 'Generic OTA', href: 'ota.html' } });
 };
 
 /** pvvx custom firmware: service 0x1F10, characteristic 0x1F1F. */

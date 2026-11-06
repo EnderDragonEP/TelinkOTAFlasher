@@ -16,7 +16,7 @@ import { keyField } from './mi.js';
 // Template helpers
 
 const NB = ' ';
-const GRAPH_MEMO = SOURCES.tools + 'GraphMemo.html';
+const GRAPH_MEMO = 'history.html';
 
 function inp(id, { title = '', value = '', maxlength = 8, mode = 'decimal', mono = false, placeholder = '' } = {}) {
   return html`<input type="text" id="${id}" title="${title}" value="${value}" maxlength="${maxlength}" inputmode="${mode}" class="${mono ? 'mono' : ''}" placeholder="${placeholder}" autocomplete="off" spellcheck="false">`;
@@ -202,7 +202,7 @@ function memoBlock(cfg, { deleteAll }) {
         <input type="text" id="memo_count" value="50" maxlength="5" inputmode="numeric" title="Number of records (1..19632)">
         ${btn('Get last records', { action: 'getMemo' })}
       </span>
-      <a class="btn ghost" href="${GRAPH_MEMO}" target="_blank" rel="noopener">GraphMemo ↗</a>
+      <a class="btn ghost" href="${GRAPH_MEMO}" target="_blank" rel="noopener" title="Read and chart the whole history (opens the History page)">History chart ↗</a>
     </div>
     <div id="memo-actions" class="actions" hidden>
       ${btn('Download records (.csv)', { action: 'downloadMemo', kind: 'small' })}
@@ -1396,7 +1396,7 @@ export function renderAtc1441Panel() {
     html`<div class="panel-stack">
       <div class="callout"><b>ATC1441 firmware detected.</b> For OTA you can also use
         <a href="${SOURCES.atc1441Flasher}" target="_blank" rel="noopener">atc1441's TelinkFlasher</a> or
-        <a href="${SOURCES.tools}TelinkOTA.html" target="_blank" rel="noopener">SDK TelinkOTA</a>.</div>
+        <a href="ota.html" target="_blank" rel="noopener">Generic OTA</a>.</div>
       ${section(
         'atc',
         'ATC1441 settings',
