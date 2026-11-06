@@ -20,6 +20,11 @@ is no build step, and it deploys as a static site to GitHub Pages.
 | **OTA** (`ota.html`) | generic Telink SDK OTA with configurable service / characteristic UUIDs | TelinkOTA |
 | **UART flasher** (`uart.html`) | wired flashing / recovery through a USB-UART adapter on the SWS pin (TLSR825x and TLSR8266/8269) | USBCOMFlashTx, USBCOMFlashTx8269 |
 
+The pages work as one app: switching tabs swaps the page in place, so the device stays connected
+and every tab uses the same connection (the header shows the connected device). Live data keeps
+recording while you are on another tab. Links, reloads and Back / Forward work as usual; a page
+opened in a new browser tab is a separate app with its own connection.
+
 pvvx's remaining tools (advertising decoder, ZigbeeTLc index OTA, debug flash reader, power
 measurements) are linked from the **More** menu.
 
@@ -52,7 +57,7 @@ Open the page in **Chrome, Edge or Opera** (desktop or Android) over HTTPS. On i
    [Xiaomi Cloud Tokens Extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor),
    then enter it and press **Login with token**.
 3. Load a firmware and press **Start flashing**.
-4. Open **Settings** and connect again to configure the custom firmware.
+4. Open **Settings** and press **Reconnect** once the device has restarted (no need to pick it again) to configure the custom firmware.
 
 ## Deploy on GitHub Pages
 
@@ -76,14 +81,15 @@ Web Bluetooth needs a secure context; `http://localhost` qualifies.
 | --- | --- |
 | `index.html`, `settings.html`, `live.html`, `history.html`, `ota.html`, `uart.html` | pages |
 | `assets/css/app.css` | styles (light / dark themes) |
+| `assets/js/app.js` | single-page shell: switches views in place, loads each page's markup |
+| `assets/js/device-hub.js` | the Bluetooth device and connection shared by every view |
 | `assets/js/site.js` | shared header, navigation, theme, log and name filter |
-| `assets/js/pages/` | entry modules of the tool pages |
-| `assets/js/main.js` | entry module of the Flasher and Settings pages (they share the connection code) |
+| `assets/js/pages/` | the views (Flasher + Settings, Live data, History, OTA, UART) |
 | `assets/js/connection.js` | device chooser, service discovery, retries, per-page routing |
 | `assets/js/mi.js` | Mi activation / login protocol |
 | `assets/js/custom.js`, `settings.js` | custom firmware protocol and settings UI |
 | `assets/js/firmware.js`, `ota.js`, `flasher.js`, `progress.js` | image validation, signing, OTA transfer, firmware card, progress |
-| `assets/js/ble-session.js` | small connection helper for the tool pages |
+| `assets/js/ble-session.js` | small connection helper for the tool views |
 | `assets/js/measure.js`, `chart.js` | measurement parsing, dew point, CSV; charts (uPlot) |
 | `assets/js/swire.js` | SWire-over-UART encoding and flash programming |
 | `assets/vendor/uplot/` | [uPlot](https://github.com/leeoniya/uPlot) 1.6.32 (MIT), served locally |
