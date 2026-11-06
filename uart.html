@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UART (SWire) Flasher</title>
+  <meta name="description" content="Write firmware to Telink TLSR825x / TLSR8269 chips through the SWS pin with an ordinary USB-UART adapter (Web Serial).">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f6fde">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script type="module" src="assets/js/pages/uart.js"></script>
+</head>
+<body>
+  <header id="site-header" class="topbar"></header>
+
+  <main class="layout">
+    <div class="col-main">
+      <div id="support-banner" class="banner" role="alert" hidden></div>
+
+      <section class="card" aria-labelledby="h-wire">
+        <div class="card-head"><h2 id="h-wire"><span class="step">1</span> Wiring</h2></div>
+        <p class="muted small">Recovers or flashes a device without Bluetooth: the adapter's TX line drives the chip's SWire debug pin (SWS).
+          Works with most USB-UART adapters (CH340, CP2102, FT232, PL2303) running at 3.3 V.</p>
+        <ol class="wiring">
+          <li><span class="pin">GND</span> → <span class="pin">−Vbat</span> (battery minus)</li>
+          <li><span class="pin">+3.3V</span> → <span class="pin">+Vbat</span> (remove the battery)</li>
+          <li><span class="pin">TX</span> → <span class="pin">SWS</span> pad</li>
+          <li class="muted">optional: <span class="pin">RTS</span> → <span class="pin">RESET</span> for an automatic reset</li>
+        </ol>
+        <p class="muted small">The pads for each device are shown on the <a href="https://github.com/pvvx/ATC_MiThermometer#the-usb-com-adapter-writes-the-firmware-in-explorer-web-version" target="_blank" rel="noopener">firmware project page</a>.
+          Without RTS → RESET, set an activation time longer than the device's advertising interval, or power-cycle it during activation.</p>
+      </section>
+
+      <section class="card" aria-labelledby="h-port">
+        <div class="card-head">
+          <h2 id="h-port"><span class="step">2</span> Adapter</h2>
+          <span id="conn-badge" class="pill">Closed</span>
+        </div>
+        <div class="form-grid">
+          <label class="field"><span>Chip</span>
+            <select id="uchip">
+              <option value="tlsr825x" selected>TLSR825x (most thermometers)</option>
+              <option value="tlsr8269">TLSR8266 / TLSR8269</option>
+            </select></label>
+          <label class="field"><span>Baud rate <small>460800 is optimal</small></span>
+            <select id="ubaud">
+              <option value="115200">115200</option><option value="230400">230400</option><option value="460800" selected>460800</option>
+              <option value="921600">921600</option><option value="1500000">1500000</option><option value="2000000">2000000</option>
+            </select></label>
+          <label class="field"><span>Activation time</span>
+            <select id="uatime" title="Longer than the advertising interval, or power-cycle the device manually">
+              <option value="0">0 ms</option><option value="100">100 ms</option><option value="1000">1 s</option><option value="2000">2 s</option>
+              <option value="3000">3 s</option><option value="4000">4 s</option><option value="5000" selected>5 s</option>
+              <option value="8000">8 s</option><option value="16000">16 s</option>
+            </select></label>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-open" data-action="togglePort">Open port</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-fw">
+        <div class="card-head"><h2 id="h-fw"><span class="step">3</span> Firmware</h2></div>
+        <div class="dropzone" id="fw-drop">
+          <input type="file" id="file" accept=".bin" hidden>
+          <p>Drop a Telink <code>.bin</code> file here or <button type="button" class="link" data-action="pickFile">browse…</button>
+            <small class="muted">(a full flash image or an OTA image, written from address 0)</small></p>
+        </div>
+        <div id="fw-selected" class="fw-selected" hidden>
+          <div id="fw-meta" class="fw-meta"></div>
+          <button type="button" class="btn ghost" data-action="clearFirmware">Clear</button>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary big" id="btn-write" data-action="writeFlash" disabled title="Write the firmware into the flash">Write to flash</button>
+          <button type="button" class="btn danger" id="btn-erase" data-action="eraseFlash" disabled title="Erase the whole flash">Erase all flash</button>
+          <button type="button" class="btn" id="btn-reset" data-action="resetMcu" disabled title="Test restart of the MCU">Soft reset MCU</button>
+        </div>
+        <div id="fw-progress" class="progress-wrap" hidden>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="fw-bar"></div></div>
+          <div class="progress-meta">
+            <b id="fw-pct">0%</b><span id="fw-blocks"></span><span id="fw-speed"></span><span id="fw-eta"></span>
+            <button type="button" class="btn small danger only-flashing" data-action="abortWrite">Abort</button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">Based on pvvx's <a href="https://pvvx.github.io/ATC_MiThermometer/USBCOMFlashTx.html" target="_blank" rel="noopener">USB-COM Flash Writer</a>
+        (<a href="https://github.com/pvvx/TlsrComSwireWriter" target="_blank" rel="noopener">TlsrComSwireWriter</a>).</footer>
+    </div>
+
+    <aside class="col-log" aria-labelledby="h-log">
+      <section class="card log-card">
+        <div class="card-head">
+          <h2 id="h-log">Log <span class="count" id="log-count">0</span></h2>
+          <div class="log-tools">
+            <label class="check small"><input type="checkbox" id="log-verbose"><span>Verbose</span></label>
+            <button type="button" class="btn small ghost" data-action="copyLog">Copy</button>
+            <button type="button" class="btn small ghost" data-action="downloadLog">Save</button>
+            <button type="button" class="btn small ghost" data-action="clearLog">Clear</button>
+          </div>
+        </div>
+        <div id="log" class="log hide-debug"><div id="log-list" class="log-list" role="log" aria-live="polite"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog" class="dialog-inner">
+      <h3 id="dialog-title"></h3>
+      <div id="dialog-body"></div>
+      <div class="actions end">
+        <button type="button" class="btn" id="dialog-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="dialog-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>
