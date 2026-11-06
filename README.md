@@ -34,7 +34,7 @@ measurements) are linked from the **More** menu.
   intervals, TX power, screen options, calibration, comfort zone, GPIO trigger, reed switch,
   clock, measurement history (CSV export), PIN code, device name, MAC, bind key, SCD41 CO₂ sensor
   and a raw command console. ZigbeeTLc (BLE mode) and ATC1441 devices are supported too.
-- Light and dark themes, phone-friendly layout, and an exportable log with an optional verbose mode.
+- Follows the device's light/dark theme (the header button switches it for the current page), phone-friendly layout, and an exportable log with an optional verbose mode.
 
 The protocol code is a faithful port of the original pages. It was verified against them with a
 simulated device and USB-UART adapter: byte-identical GATT and serial traffic, including
