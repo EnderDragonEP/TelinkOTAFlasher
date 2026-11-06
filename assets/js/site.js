@@ -24,25 +24,46 @@ export const store = {
 };
 
 // ---------------------------------------------------------------------------
-// Theme
+// Theme: pages follow the device's light/dark setting. The header button flips it for the
+// current page only (nothing is stored); a change of the device theme takes over again.
 
-function applyTheme(theme) {
-  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-  else delete document.documentElement.dataset.theme;
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+const SUN_ICON = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const MOON_ICON = html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>`;
+
+const deviceTheme = () => (darkQuery.matches ? 'dark' : 'light');
+
+function currentTheme() {
+  const t = document.documentElement.dataset.theme;
+  return t === 'light' || t === 'dark' ? t : deviceTheme();
+}
+
+/** The icon shows the theme a click switches to. */
+function syncThemeButton() {
   const btn = $('theme-toggle');
-  if (btn) {
-    btn.setAttribute('aria-label', `Theme: ${theme || 'system'}`);
-    btn.title = `Theme: ${theme || 'system'} (click to change)`;
-  }
+  if (!btn) return;
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  render(btn, next === 'light' ? SUN_ICON : MOON_ICON);
+  btn.setAttribute('aria-label', `Switch to ${next} theme`);
+  btn.title = `Switch to ${next} theme`;
+}
+
+/** 'light' | 'dark' | null (follow the device). An override equal to the device theme is dropped. */
+function setTheme(theme) {
+  const root = document.documentElement;
+  if (theme && theme !== deviceTheme()) root.dataset.theme = theme;
+  else delete root.dataset.theme;
+  syncThemeButton();
   document.dispatchEvent(new CustomEvent('themechange'));
 }
 
 function toggleTheme() {
-  const order = [null, 'light', 'dark'];
-  const next = order[(order.indexOf(store.get('theme')) + 1) % order.length];
-  store.set('theme', next);
-  applyTheme(next);
-  toast(`Theme: ${next || 'system'}`);
+  setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+}
+
+function initTheme() {
+  syncThemeButton();
+  darkQuery.addEventListener('change', () => setTheme(null));
 }
 
 // ---------------------------------------------------------------------------
@@ -75,9 +96,7 @@ function renderHeader(pageId) {
             )}
           </div>
         </details>
-        <button type="button" class="icon-btn" id="theme-toggle" data-action="toggleTheme" aria-label="Toggle theme">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
-        </button>
+        <button type="button" class="icon-btn" id="theme-toggle" data-action="toggleTheme" aria-label="Switch theme"></button>
       </nav>`,
   );
   // Close the "More" menu when clicking elsewhere.
@@ -205,8 +224,8 @@ export function onActionError(err) {
  * Returns whether the required browser API is available.
  */
 export function initSite({ page, needs = 'bluetooth', onCommand = async () => {}, actions = {} }) {
-  applyTheme(store.get('theme'));
   renderHeader(page);
+  initTheme();
   if (needs === 'bluetooth') installGattQueue();
   if ($('log-list')) initLog({ list: $('log-list'), scroll: $('log-list'), count: $('log-count') });
   initLogControls();

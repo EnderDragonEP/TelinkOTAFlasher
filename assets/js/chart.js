@@ -68,10 +68,9 @@ export class ChartGroup {
     this.build();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(host);
+    // site.js dispatches 'themechange' for the header toggle and for device theme changes.
     this.onTheme = () => this.build();
     document.addEventListener('themechange', this.onTheme);
-    this.mq = window.matchMedia('(prefers-color-scheme: dark)');
-    this.mq.addEventListener('change', this.onTheme);
   }
 
   width() {
@@ -222,7 +221,6 @@ export class ChartGroup {
   destroy() {
     this.ro.disconnect();
     document.removeEventListener('themechange', this.onTheme);
-    this.mq.removeEventListener('change', this.onTheme);
     for (const c of this.charts.values()) c.destroy();
     this.charts.clear();
   }
