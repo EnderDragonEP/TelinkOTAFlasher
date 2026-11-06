@@ -84,6 +84,8 @@ export const S = {
   },
   miClockOffset: 0,
   miClockTimer: null,
+  /** hub.connectionId of the connection on which Mi authorisation ran (null: none). */
+  miAuthConn: null,
 
   // Custom firmware state (see custom.js)
   cfg: defaultCfg(),

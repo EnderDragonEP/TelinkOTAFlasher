@@ -3,6 +3,13 @@
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Wait until cond() is true or the timeout expires; returns the final cond(). */
+export async function until(cond, timeoutMs = 5000, stepMs = 50) {
+  const t0 = Date.now();
+  while (!cond() && Date.now() - t0 < timeoutMs) await sleep(stepMs);
+  return cond();
+}
+
 /** Upper-case, zero padded hex of a number (same semantics as the original `hex()`). */
 export function hex(number, len) {
   let str = number.toString(16).toUpperCase();

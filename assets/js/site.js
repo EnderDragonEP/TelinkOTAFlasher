@@ -1,9 +1,9 @@
 // Shared page shell: header/navigation, theme, support banner, name filter, log controls and
-// action delegation. Every page calls initSite() from its entry module.
+// action delegation. app.js calls initShell() once and mountView() for every view it shows.
 import { APP, NAV, EXTERNAL_TOOLS, NAME_PREFIXES } from './config.js';
 import { installGattQueue, webBluetoothSupport } from './ble.js';
 import { log, initLog, clearLog, logAsText } from './log.js';
-import { $, html, render, getVal, registerActions, bindDelegation, toast, copyText, downloadText } from './ui.js';
+import { $, html, render, getVal, registerActions, setViewActions, bindDelegation, toast, copyText, downloadText } from './ui.js';
 
 export const store = {
   get(k, d = null) {
@@ -75,11 +75,14 @@ function renderHeader(pageId) {
   host.className = 'topbar';
   render(
     host,
-    html`<a class="brand" href="index.html" title="${APP.name}">
-        <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M11 10.5l10 9-5 4.5V8l5 4.5-10 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="brand-name">${APP.name}</span>
-        <span class="badge">v${APP.version}</span>
-      </a>
+    html`<div class="brand-group">
+        <a class="brand" href="index.html" title="${APP.name}">
+          <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M11 10.5l10 9-5 4.5V8l5 4.5-10 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="brand-name">${APP.name}</span>
+          <span class="badge">v${APP.version}</span>
+        </a>
+        <span id="hdr-device" class="hdr-device" role="status" hidden><i class="dot" aria-hidden="true"></i><span class="hdr-device-name"></span></span>
+      </div>
       <nav class="topnav" aria-label="Pages">
         <div class="navtabs">
           ${NAV.map(
@@ -104,6 +107,21 @@ function renderHeader(pageId) {
     const menu = host.querySelector('details.menu');
     if (menu && menu.open && !menu.contains(ev.target)) menu.open = false;
   });
+}
+
+/** Mark the tab (and the More menu entry) of the view being shown. */
+export function setActiveTab(pageId) {
+  for (const a of document.querySelectorAll('#site-header .navtab, #site-header a.menu-pages')) {
+    const href = a.getAttribute('href');
+    const on = NAV.some((p) => p.id === pageId && p.href === href);
+    a.classList.toggle('active', on);
+    if (a.classList.contains('navtab')) {
+      if (on) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    }
+  }
+  const menu = document.querySelector('#site-header details.menu');
+  if (menu) menu.open = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,30 +236,37 @@ export function onActionError(err) {
   toast(msg, 'error', 4000);
 }
 
-/**
- * Common page setup.
- * opts: { page: NAV id, needs: 'bluetooth' | 'serial' | null, onCommand?(hex), actions?: {} }
- * Returns whether the required browser API is available.
- */
-export function initSite({ page, needs = 'bluetooth', onCommand = async () => {}, actions = {} }) {
+let currentPage = 'flasher';
+
+/** One-time setup of the parts that persist across views: header, theme, log, delegation. */
+export function initShell(page) {
+  currentPage = page;
   renderHeader(page);
   initTheme();
-  if (needs === 'bluetooth') installGattQueue();
+  installGattQueue();
   if ($('log-list')) initLog({ list: $('log-list'), scroll: $('log-list'), count: $('log-count') });
   initLogControls();
-  initPrefix();
   registerActions({
     toggleTheme,
     togglePrefix,
     copyLog: () => copyText(logAsText({ includeDebug: !!($('log-verbose') && $('log-verbose').checked) }), 'Log copied'),
-    downloadLog: () => downloadText(`telink-${page}-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`, logAsText()),
+    downloadLog: () => downloadText(`telink-${currentPage}-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`, logAsText()),
     clearLog,
-    ...actions,
   });
-  bindDelegation(document.body, onCommand, onActionError);
-  const ok = checkSupport(needs);
-  const nav = NAV.find((n) => n.id === page);
-  if (page !== 'flasher' && nav) log.info(`${nav.label} · ${APP.name} v${APP.version}`);
+  bindDelegation(document.body, async () => {}, onActionError);
+  log.info(`${APP.name} v${APP.version} (based on ${APP.basedOn})`);
   window.flasherLog = log;
-  return ok;
+}
+
+/**
+ * Per-view setup once its markup is in place.
+ * opts: { page: NAV id, needs: 'bluetooth' | 'serial' | null, onCommand?(hex), actions?: {} }
+ * Returns whether the required browser API is available.
+ */
+export function mountView({ page, needs = 'bluetooth', onCommand = null, actions = {} }) {
+  currentPage = page;
+  setActiveTab(page);
+  setViewActions(actions, onCommand);
+  initPrefix();
+  return checkSupport(needs);
 }

@@ -1,7 +1,9 @@
-// Minimal connection manager for the single-purpose BLE pages (live data, history, OTA):
-// device chooser with the shared name filter, GATT connect, user/unexpected disconnects,
-// optional automatic reconnect, and a session id so stale async work is ignored.
-import { isUserCancel } from './ble.js';
+// Connection helper for the single-purpose BLE views (live data, history, OTA) on top of the
+// shared device hub: device chooser with the shared name filter, GATT connect (reusing an open
+// connection), user/unexpected disconnects, optional automatic reconnect, and a session id so
+// stale async work is ignored. While its view is not shown (`active` false) a session keeps its
+// state but never touches the page.
+import { hub } from './device-hub.js';
 import { log } from './log.js';
 import { setBadge, setStatus } from './ui.js';
 import { nameFilterOptions } from './site.js';
@@ -14,63 +16,82 @@ export class BleSession {
    */
   constructor(opts) {
     this.opts = opts;
-    this.device = null;
     this.server = null;
     this.phase = 'idle';
     this.id = 0;
+    this.active = false;
+    this.attached = null; // the device this session set up
     this.userDisconnect = false;
-    this.onGattDisconnected = (ev) => this.handleDisconnect(ev);
+    hub.on('disconnected', (ev) => this.handleDisconnect(ev));
+  }
+
+  get device() {
+    return hub.device;
   }
 
   get connected() {
-    return !!(this.device && this.device.gatt.connected && this.phase === 'connected');
+    return !!(this.attached && this.attached === hub.device && hub.connected && this.phase === 'connected');
   }
 
   alive(id) {
     return id === this.id;
   }
 
+  /** The view was shown (true) or left (false). */
+  setActive(on) {
+    this.active = on;
+    if (on) this.setPhase(this.phase);
+  }
+
   setPhase(phase) {
     this.phase = phase;
+    if (!this.active) return;
     setBadge(phase);
     if (this.opts.onState) this.opts.onState(phase);
   }
 
+  status(text, opts) {
+    if (this.active) setStatus(text, opts);
+  }
+
   async choose() {
     const services = typeof this.opts.optionalServices === 'function' ? this.opts.optionalServices() : this.opts.optionalServices;
-    const options = nameFilterOptions(services, { hideUnnamed: !!this.opts.hideUnnamed?.() });
-    log.debug('requestDevice', options);
-    try {
-      return await navigator.bluetooth.requestDevice(options);
-    } catch (err) {
-      if (isUserCancel(err)) log.info('Device selection cancelled.');
-      else log.error(err);
-      return null;
-    }
+    return hub.choose(nameFilterOptions(services, { hideUnnamed: !!this.opts.hideUnnamed?.() }));
   }
 
   /** Pick a device (unless `reuse` and one is known) and connect to it. */
   async connect({ reuse = false } = {}) {
-    let device = reuse ? this.device : null;
+    let device = reuse ? hub.device : null;
     if (!device) device = await this.choose();
     if (!device) return false;
-    if (this.device && this.device !== device) {
-      this.device.removeEventListener('gattserverdisconnected', this.onGattDisconnected);
-      if (this.device.gatt.connected) this.device.gatt.disconnect();
-    }
-    if (this.device !== device) device.addEventListener('gattserverdisconnected', this.onGattDisconnected);
-    this.device = device;
     return this.open();
+  }
+
+  /** Take over the open connection without running onConnected (the view starts work itself). */
+  adopt() {
+    if (!hub.connected) return false;
+    this.id++;
+    this.userDisconnect = false;
+    this.server = hub.device.gatt;
+    this.attached = hub.device;
+    this.setPhase('connected');
+    return true;
   }
 
   async open(attempt = 0, { quiet = false } = {}) {
     const id = ++this.id;
+    const device = hub.device;
+    const reuse = hub.connected;
     this.userDisconnect = false;
     this.setPhase('connecting');
-    setStatus(`Connecting to ${this.device.name || 'device'}…`, { kind: 'busy' });
-    log.info('Connecting to: ' + (this.device.name || this.device.id));
+    if (reuse) log.debug(`Using the open connection to ${device.name || device.id}`);
+    else {
+      this.status(`Connecting to ${device.name || 'device'}…`, { kind: 'busy' });
+      log.info('Connecting to: ' + (device.name || device.id));
+    }
     try {
-      this.server = await this.device.gatt.connect();
+      this.server = await hub.connect();
+      this.attached = device;
       if (!this.alive(id)) return false;
       log.debug('GATT server connected');
       await this.opts.onConnected(this.server, { id, alive: () => this.alive(id) });
@@ -81,10 +102,17 @@ export class BleSession {
       if (!this.alive(id) || this.userDisconnect) return false;
       log.error(err && err.message ? `${err.name ? err.name + ': ' : ''}${err.message}` : String(err));
       if (quiet) return false;
-      if (attempt < 2 && this.device) {
+      if (reuse && hub.connected) {
+        // The shared connection is fine, this view just cannot use the device: leave it connected.
+        this.attached = null;
+        this.setPhase('idle');
+        this.status(err && err.name === 'SecurityError' ? 'This device was picked without access to the needed service. Press Connect and pick it again.' : 'This device cannot be used here: ' + (err.message || err), { kind: 'error' });
+        return false;
+      }
+      if (attempt < 2 && hub.device === device && !(err && err.name === 'SecurityError')) {
         log.warn(`Retrying (${attempt + 1}/2)…`);
         try {
-          if (this.device.gatt.connected) this.device.gatt.disconnect();
+          if (device.gatt.connected) device.gatt.disconnect();
         } catch {
           /* ignore */
         }
@@ -92,7 +120,7 @@ export class BleSession {
         if (this.alive(id) && !this.userDisconnect) return this.open(attempt + 1);
         return false;
       }
-      setStatus('Could not connect: ' + (err.message || err), { kind: 'error' });
+      this.status('Could not connect: ' + (err.message || err), { kind: 'error' });
       this.disconnect();
       return false;
     }
@@ -101,7 +129,7 @@ export class BleSession {
   disconnect() {
     this.userDisconnect = true;
     this.id++;
-    if (this.device && this.device.gatt.connected) this.device.gatt.disconnect();
+    hub.disconnect();
     if (this.phase !== 'idle') {
       this.setPhase('idle');
       log.info('Disconnected.');
@@ -110,21 +138,21 @@ export class BleSession {
   }
 
   async handleDisconnect(ev) {
-    if (ev.target !== this.device || this.userDisconnect || this.phase === 'idle') return;
+    if (!this.attached || ev.target !== this.attached || this.userDisconnect || this.phase === 'idle') return;
     const wasConnected = this.phase === 'connected';
-    log.warn(`"${this.device.name}" disconnected.`);
-    if (wasConnected && this.opts.autoReconnect && this.opts.autoReconnect()) {
-      for (let i = 1; i <= 3 && !this.userDisconnect; i++) {
-        setStatus(`Connection lost, reconnecting (${i}/3)…`, { kind: 'busy' });
+    if (this.active) log.warn(`"${this.attached.name}" disconnected.`);
+    if (wasConnected && this.active && this.opts.autoReconnect && this.opts.autoReconnect() && hub.device === this.attached) {
+      for (let i = 1; i <= 3 && !this.userDisconnect && this.active; i++) {
+        this.status(`Connection lost, reconnecting (${i}/3)…`, { kind: 'busy' });
         await sleep(1000 * i);
-        if (this.userDisconnect) return;
+        if (this.userDisconnect || !this.active) break;
         if (await this.open(2, { quiet: true })) return;
       }
     }
     if (this.userDisconnect) return;
     this.id++;
     this.setPhase('idle');
-    setStatus('Disconnected', { kind: 'info' });
+    this.status('Disconnected', { kind: 'info' });
     if (this.opts.onDisconnected) this.opts.onDisconnected(true);
   }
 }

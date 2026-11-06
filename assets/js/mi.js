@@ -5,6 +5,7 @@
 // the asynchronous WebCrypto calls cannot reorder protocol steps.
 import { S } from './state.js';
 import { UUID, writeChar, onNotify } from './ble.js';
+import { hub } from './device-hub.js';
 import { log } from './log.js';
 import { $, html, render, setStatus, setLive, getVal, setVal, confirmDialog, toast, copyText, downloadText, setHidden, setPanelTitle } from './ui.js';
 import { bytesToHex, hexToBytes, hex2ascii, parseHex } from './util.js';
@@ -499,6 +500,7 @@ export const copyField = (id) => copyText(getVal(id), 'Copied');
  * version from the device name (port of the original miAuthorization()).
  */
 export async function miAuthorization() {
+  S.miAuthConn = hub.connectionId; // a Mi session is tied to this connection (see connection.attach)
   const service = await S.server.getPrimaryService(0xfe95);
   log.debug('Found Mi auth service');
   S.enc10 = await service.getCharacteristic(0x0010);

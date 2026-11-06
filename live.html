@@ -11,9 +11,9 @@
   <link rel="stylesheet" href="assets/vendor/uplot/uPlot.min.css">
   <link rel="stylesheet" href="assets/css/app.css">
   <script defer src="assets/vendor/uplot/uPlot.iife.min.js"></script>
-  <script type="module" src="assets/js/pages/live.js"></script>
+  <script type="module" src="assets/js/app.js"></script>
 </head>
-<body>
+<body data-page="live">
   <header id="site-header" class="topbar"></header>
 
   <main class="layout">
@@ -43,6 +43,7 @@
         </div>
         <div class="actions">
           <button type="button" class="btn primary" id="btn-connect" data-action="connect">Connect</button>
+          <button type="button" class="btn" id="btn-reconnect" data-action="reconnect" disabled>Reconnect</button>
           <button type="button" class="btn" id="btn-disconnect" data-action="disconnect" disabled>Disconnect</button>
         </div>
         <div id="status" class="status" role="status" aria-live="polite"></div>

@@ -71,6 +71,18 @@ export async function loadIndexes() {
   renderFirmwarePanel();
 }
 
+let indexRequest = null;
+
+/** Load the firmware index once per visit of the app; later calls only redraw its state. */
+export function ensureIndexes() {
+  if (!indexRequest) indexRequest = loadIndexes();
+  else if (S.index.ota.loaded || S.index.error) {
+    renderIndexStatus();
+    renderFirmwarePanel();
+  } else renderIndexStatus('loading');
+  return indexRequest;
+}
+
 function renderIndexStatus(state) {
   const el = $('fw-index');
   if (!el) return;

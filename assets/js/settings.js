@@ -88,7 +88,7 @@ export function showSettingsLink() {
   else if (!S.devIdEnabled) what2 = 'Smiley, advertising type, units, interval and the LCD segment mapper are';
   setPageHint(html`<div class="hint-body">
       <p>This device runs <b>${what}</b>. ${what2} on the <b>Settings</b> page.</p>
-      <p class="muted small">Leaving this page disconnects the device; connect it again there.</p>
+      <p class="muted small">The connection stays open when you switch tabs.</p>
     </div>
     <a class="btn" href="settings.html">Open Settings</a>`);
   return true;

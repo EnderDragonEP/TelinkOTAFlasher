@@ -1,16 +1,19 @@
-// USB-COM (UART -> SWire) flasher page: port of pvvx's USBCOMFlashTx.html and
-// USBCOMFlashTx8269.html, merged with a chip selector.
-import { initSite, store } from '../site.js';
+// USB-COM (UART -> SWire) flasher view: port of pvvx's USBCOMFlashTx.html and
+// USBCOMFlashTx8269.html, merged with a chip selector. The serial port stays open while
+// other tabs are shown.
+import { mountView, store, webSerialSupport } from '../site.js';
 import { log } from '../log.js';
 import { $, html, render, getVal, setVal, setStatus, confirmDialog, alertDialog, toast, bindFileDrop } from '../ui.js';
-import { formatBytes } from '../util.js';
+import { formatBytes, until } from '../util.js';
 import { validateOtaImage, hasTelinkMagic } from '../firmware.js';
 import { SwireFlasher, CHIPS } from '../swire.js';
 import { setBusy, showProgress, progressState } from '../progress.js';
 
 const P = { port: null, writer: null, fw: null, busy: false, ctrl: null };
+let mounted = false;
 
 function updateButtons() {
+  if (!mounted) return;
   const open = !!P.port;
   $('btn-open').textContent = open ? 'Close port' : 'Open port';
   $('btn-open').classList.toggle('primary', !open);
@@ -67,7 +70,7 @@ async function closePort() {
     log.debug(err);
   }
   log.info('USB-COM closed.');
-  setStatus('Port closed.');
+  if (mounted) setStatus('Port closed.');
   updateButtons();
 }
 
@@ -182,6 +185,7 @@ async function loadFile(file) {
 }
 
 function renderFw() {
+  if (!mounted) return;
   $('fw-selected').hidden = !P.fw;
   if (P.fw) {
     const okCrc = P.fw.check === 'ok' || P.fw.check === 'sign';
@@ -198,28 +202,21 @@ function renderFw() {
   updateButtons();
 }
 
-const supported = initSite({
-  page: 'uart',
-  needs: 'serial',
-  actions: {
-    togglePort: () => (P.port ? closePort() : openPort()),
-    writeFlash,
-    eraseFlash,
-    resetMcu,
-    abortWrite,
-    pickFile: () => $('file').click(),
-    clearFirmware: () => {
-      P.fw = null;
-      $('file').value = '';
-      renderFw();
-    },
+const actions = {
+  togglePort: () => (P.port ? closePort() : openPort()),
+  writeFlash,
+  eraseFlash,
+  resetMcu,
+  abortWrite,
+  pickFile: () => $('file').click(),
+  clearFirmware: () => {
+    P.fw = null;
+    $('file').value = '';
+    renderFw();
   },
-});
-setVal('ubaud', store.get('uartBaud') || '460800');
-setVal('uchip', store.get('uartChip') || 'tlsr825x');
-setVal('uatime', store.get('uartActivation') || '5000');
-bindFileDrop($('fw-drop'), $('file'), loadFile);
-if (supported) {
+};
+
+if (webSerialSupport().ok) {
   navigator.serial.addEventListener('disconnect', (ev) => {
     if (P.port && ev.target === P.port) {
       log.warn('The USB-UART adapter was unplugged.');
@@ -229,6 +226,41 @@ if (supported) {
     }
   });
 }
-updateButtons();
-if (!supported) $('btn-open').disabled = true;
-setStatus(supported ? 'Connect the wires, then open the USB-UART port.' : 'Web Serial is not available in this browser.');
+
+export const view = {
+  needs: 'serial',
+
+  mount() {
+    mounted = true;
+    const supported = mountView({ page: 'uart', needs: 'serial', actions });
+    setVal('ubaud', store.get('uartBaud') || '460800');
+    setVal('uchip', store.get('uartChip') || 'tlsr825x');
+    setVal('uatime', store.get('uartActivation') || '5000');
+    bindFileDrop($('fw-drop'), $('file'), loadFile);
+    renderFw();
+    updateButtons();
+    if (!supported) $('btn-open').disabled = true;
+    if (!supported) setStatus('Web Serial is not available in this browser.');
+    else if (P.port) setStatus(P.fw ? 'Port open. Press “Write to flash”.' : 'Port open. Choose a firmware file.', { kind: 'ok' });
+    else setStatus('Connect the wires, then open the USB-UART port.');
+  },
+
+  unmount() {
+    mounted = false;
+  },
+
+  /** Leaving while writing aborts it (after confirmation). */
+  async canLeave() {
+    if (!P.busy) return true;
+    const ok = await confirmDialog('The adapter is still busy. Leaving this tab aborts the operation; write the firmware again before using the device.', {
+      title: 'Operation in progress',
+      ok: 'Abort and leave',
+      cancel: 'Stay',
+      danger: true,
+    });
+    if (!ok) return false;
+    if (P.ctrl) P.ctrl.abort();
+    await until(() => !P.busy, 15000);
+    return true;
+  },
+};

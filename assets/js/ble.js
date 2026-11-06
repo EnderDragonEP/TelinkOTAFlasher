@@ -25,6 +25,14 @@ export const OPTIONAL_SERVICES = [
   0x180a, 0x181c, 0x181e, 0xfe95, 0x1f10, 0x1f11, 0x181a, 0xfff9, 0xfdcd, 0xffe0, 0xfcd2,
 ];
 
+/** Full 128-bit UUID, or a 16/32-bit alias written as hex (e.g. 1912, 0x1F10); null if invalid. */
+export function parseUuid(text) {
+  const t = String(text ?? '').trim().toLowerCase();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(t)) return t;
+  const m = t.match(/^(?:0x)?([0-9a-f]{4}|[0-9a-f]{8})$/);
+  return m ? parseInt(m[1], 16) : null;
+}
+
 /** 16/32-bit alias or full UUID string -> canonical lower-case 128-bit string. */
 export function canonicalUUID(u) {
   if (typeof u === 'number') return `${u.toString(16).padStart(8, '0')}-0000-1000-8000-00805f9b34fb`;
@@ -64,11 +72,37 @@ export function writeChar(characteristic, data) {
   return characteristic.writeValue(bytes);
 }
 
-/** Attach the (single) notification handler of a characteristic, replacing a previous one. */
-export function onNotify(characteristic, handler) {
-  if (characteristic.__flasherHandler) characteristic.removeEventListener('characteristicvaluechanged', characteristic.__flasherHandler);
-  characteristic.__flasherHandler = (ev) => handler(ev.target.value);
-  characteristic.addEventListener('characteristicvaluechanged', characteristic.__flasherHandler);
+// Notification handlers are kept per owner ('main' = Flasher/Settings, 'live', 'history', …):
+// views share one connection, so the Live data recorder and the open view can both listen
+// to the same characteristic. A view releases its handlers when it is left.
+const owned = new Map(); // owner -> Set<characteristic>
+
+/** Set the notification handler of `owner` on a characteristic (replacing its previous one). */
+export function onNotify(characteristic, handler, owner = 'main') {
+  if (!characteristic.__notify) {
+    const handlers = new Map();
+    characteristic.__notify = handlers;
+    characteristic.addEventListener('characteristicvaluechanged', (ev) => {
+      for (const fn of [...handlers.values()]) {
+        try {
+          fn(ev.target.value);
+        } catch (err) {
+          setTimeout(() => {
+            throw err;
+          });
+        }
+      }
+    });
+  }
+  characteristic.__notify.set(owner, handler);
+  if (!owned.has(owner)) owned.set(owner, new Set());
+  owned.get(owner).add(characteristic);
+}
+
+/** Remove every notification handler of `owner` (notifications stay enabled on the device). */
+export function releaseNotify(owner) {
+  for (const ch of owned.get(owner) || []) ch.__notify.delete(owner);
+  owned.delete(owner);
 }
 
 export function webBluetoothSupport() {

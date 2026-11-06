@@ -1,7 +1,8 @@
 // Connection lifecycle: device chooser, service discovery, routing to the right
 // firmware handler, retries and disconnect handling (port of connect()/doConnect()).
 import { S, resetConnectionState, resetServiceFlags, MAX_BLE_OTA_SIZE, MAX_EXT_OTA_SIZE } from './state.js';
-import { UUID, OPTIONAL_SERVICES, webBluetoothSupport, isUserCancel } from './ble.js';
+import { UUID, OPTIONAL_SERVICES, webBluetoothSupport, releaseNotify } from './ble.js';
+import { hub } from './device-hub.js';
 import { log, logLink } from './log.js';
 import { $, html, render, setStatus, setLive, setBadge, setHidden, onStatus, setPageHint } from './ui.js';
 import { sleep, formatMac } from './util.js';
@@ -15,6 +16,9 @@ import { renderFirmwarePanel } from './flasher.js';
 
 const MAX_RETRIES = 5;
 let fwType = '';
+/** True while the Flasher or Settings view is shown; this module never touches other views. */
+let mounted = false;
+let offDisconnected = null;
 
 // ---------------------------------------------------------------------------
 // UI state
@@ -32,7 +36,7 @@ function clean(s) {
 
 export function renderDeviceInfo() {
   const box = $('device-info');
-  if (!box) return;
+  if (!box || !mounted) return;
   if (!S.device) {
     box.hidden = true;
     return;
@@ -83,16 +87,9 @@ export async function connect() {
     options.acceptAllDevices = false;
     options.filters = prefixes.map((namePrefix) => ({ namePrefix }));
   }
-  log.debug('requestDevice', options);
   log.info('Searching for devices');
-  let device;
-  try {
-    device = await navigator.bluetooth.requestDevice(options);
-  } catch (err) {
-    if (isUserCancel(err)) log.info('Device selection cancelled.');
-    else log.error(err);
-    return;
-  }
+  const device = await hub.choose(options);
+  if (!device) return;
   // Leave the previous device only once a new one was picked.
   if (S.device && S.device !== device) {
     S.retrying = true;
@@ -107,10 +104,6 @@ export async function connect() {
   if (S.fw && S.fw.deviceId && S.fw.deviceId !== device.id) S.fw = null;
   if (S.device !== device) S.advMac = null;
   S.device = device;
-  if (!device.__flasherListener) {
-    device.addEventListener('gattserverdisconnected', onDisconnected);
-    device.__flasherListener = true;
-  }
   S.connectTrys = 0;
   S.noRetry = false;
   log.info('Connecting to: ' + (device.name || device.id));
@@ -183,6 +176,7 @@ export async function doConnect() {
     renderDeviceInfo();
     renderFirmwarePanel();
     updateButtons();
+    hub.emit('setup-done', 'main');
   } catch (err) {
     if (sid !== S.session) return;
     await handleError(err, sid);
@@ -252,7 +246,7 @@ async function getDevVersion() {
 
 async function setup(sid) {
   const dev = S.device;
-  const server = await dev.gatt.connect();
+  const server = await hub.connect();
   if (sid !== S.session) return;
   log.debug('Found GATT server');
   S.server = server;
@@ -407,13 +401,56 @@ async function setupSettings(sid) {
     setPageHint(
       html`<div class="hint-body">
           <p>This device runs <b>${what}</b>. Use the <b>Flasher</b> to activate it or to install the custom firmware, then come back here to configure it.</p>
-          <p class="muted small">Leaving this page disconnects the device.</p>
         </div>
         <a class="btn" href="index.html">Open Flasher</a>`,
       'warn',
     );
   }
   updateButtons();
+}
+
+// ---------------------------------------------------------------------------
+// View lifecycle (single-page app): the Flasher / Settings view is shown or left
+
+/** The view was shown: adopt the shared device and set it up if it is connected. */
+export function attach() {
+  mounted = true;
+  offDisconnected = hub.on('disconnected', onDisconnected);
+  S.device = hub.device;
+  S.userDisconnect = false;
+  S.retrying = false;
+  S.connectTrys = 0;
+  S.noRetry = false;
+  if (hub.connected) {
+    log.info(`Using the open connection to ${S.device.name || 'the device'}.`);
+    // A Mi session cannot be resumed: start the Flasher on a fresh connection (no chooser).
+    if (S.page === 'flasher' && S.miAuthConn === hub.connectionId) reconnect();
+    else doConnect();
+    return;
+  }
+  resetConnectionState();
+  resetServiceFlags();
+  fwType = '';
+  setPhase('idle');
+  clearDeviceUi();
+  renderDeviceInfo();
+  renderFirmwarePanel();
+  setStatus(S.device ? `Press Reconnect to connect to ${S.device.name || 'the device'} again, or Connect to pick a device.` : 'Waiting for you to connect a device.');
+}
+
+/** The view is being left: stop reacting to the device (it stays connected for the next view). */
+export function detach() {
+  mounted = false;
+  if (offDisconnected) offDisconnected();
+  offDisconnected = null;
+  S.session++;
+  S.retrying = false;
+  releaseNotify('main');
+  if (S.miClockTimer) {
+    clearInterval(S.miClockTimer);
+    S.miClockTimer = null;
+  }
+  S.phase = 'idle';
 }
 
 // ---------------------------------------------------------------------------

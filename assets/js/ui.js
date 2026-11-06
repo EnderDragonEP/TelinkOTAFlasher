@@ -239,9 +239,21 @@ export function downloadText(filename, text, type = 'text/plain') {
 
 // ---------------------------------------------------------------------------
 // Event delegation: <button data-action="name" data-arg="x"> and <button data-cmd="55">.
-const actions = Object.create(null);
+// Site-wide actions (theme, log, …) plus the actions of the open view, which are replaced
+// whenever another view is shown (views reuse names such as "connect").
+const siteActions = Object.create(null);
+let viewActions = Object.create(null);
+let viewCommand = null;
+const findAction = (name) => viewActions[name] || siteActions[name];
+
 export function registerActions(map) {
-  Object.assign(actions, map);
+  Object.assign(siteActions, map);
+}
+
+/** Actions and the data-cmd handler of the view being shown. */
+export function setViewActions(map = {}, onCommand = null) {
+  viewActions = Object.assign(Object.create(null), map);
+  viewCommand = onCommand;
 }
 
 export function bindDelegation(root, onCommand, onError) {
@@ -256,9 +268,9 @@ export function bindDelegation(root, onCommand, onError) {
         if (!ok) return;
       }
       if (el.dataset.cmd !== undefined) {
-        await onCommand(el.dataset.cmd);
+        await (viewCommand || onCommand)(el.dataset.cmd);
       } else {
-        const fn = actions[el.dataset.action];
+        const fn = findAction(el.dataset.action);
         if (!fn) throw new Error(`Unknown action "${el.dataset.action}"`);
         await fn(el.dataset.arg, el, ev);
       }
@@ -269,7 +281,7 @@ export function bindDelegation(root, onCommand, onError) {
   root.addEventListener('change', (ev) => {
     const el = ev.target.closest('[data-change]');
     if (!el) return;
-    const fn = actions[el.dataset.change];
+    const fn = findAction(el.dataset.change);
     if (fn) {
       try {
         fn(el.value, el, ev);
@@ -281,7 +293,7 @@ export function bindDelegation(root, onCommand, onError) {
   root.addEventListener('keydown', (ev) => {
     const el = ev.target.closest('[data-enter]');
     if (!el || ev.key !== 'Enter') return;
-    const fn = actions[el.dataset.enter];
+    const fn = findAction(el.dataset.enter);
     if (fn) {
       ev.preventDefault();
       Promise.resolve(fn(el.value, el, ev)).catch(onError);
