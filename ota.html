@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generic Telink OTA</title>
+  <meta name="description" content="Flash any Telink BLE device that implements the Telink SDK OTA service, with configurable service and characteristic UUIDs.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f6fde">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script type="module" src="assets/js/pages/generic-ota.js"></script>
+</head>
+<body>
+  <header id="site-header" class="topbar"></header>
+
+  <main class="layout">
+    <div class="col-main">
+      <div id="support-banner" class="banner" role="alert" hidden></div>
+
+      <section class="card" aria-labelledby="h-dev">
+        <div class="card-head">
+          <h2 id="h-dev"><span class="step">1</span> Device</h2>
+          <span id="conn-badge" class="pill">Disconnected</span>
+        </div>
+        <p class="muted small">For devices running Telink SDK firmware (or any firmware exposing the Telink OTA protocol). For pvvx / ATC / stock Xiaomi
+          and Qingping thermometers use the <a href="index.html">Flasher</a>, which also handles activation, signing and large images.</p>
+        <div class="form-grid">
+          <label class="field span-2"><span>OTA service UUID</span>
+            <input type="text" id="iPServ" class="mono" value="00010203-0405-0607-0809-0a0b0c0d1912" maxlength="36" autocomplete="off" spellcheck="false"></label>
+          <label class="field span-2"><span>OTA characteristic UUID</span>
+            <input type="text" id="iPChar" class="mono" value="00010203-0405-0607-0809-0a0b0c0d2b12" maxlength="36" autocomplete="off" spellcheck="false"></label>
+        </div>
+        <div class="actions"><button type="button" class="btn small ghost" data-action="resetUuids">Reset to the Telink defaults</button></div>
+        <label class="field" for="namePrefix">
+          <span>Name filter <small>comma-separated prefixes</small></span>
+          <input type="text" id="namePrefix" placeholder="e.g. ATC,LYWSD03" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="chips" id="prefix-chips" aria-label="Quick filters"></div>
+        <label class="check"><input type="checkbox" id="hideUnknown" checked><span>Hide devices without a name</span></label>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-connect" data-action="connect">Connect</button>
+          <button type="button" class="btn" id="btn-reconnect" data-action="reconnect" disabled>Reconnect</button>
+          <button type="button" class="btn" id="btn-disconnect" data-action="disconnect" disabled>Disconnect</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-fw">
+        <div class="card-head"><h2 id="h-fw"><span class="step">2</span> Firmware</h2></div>
+        <div class="dropzone" id="fw-drop">
+          <input type="file" id="file" accept=".bin" hidden>
+          <p>Drop a Telink <code>.bin</code> file here or <button type="button" class="link" data-action="pickFile">browse…</button></p>
+        </div>
+        <div id="fw-selected" class="fw-selected" hidden>
+          <div id="fw-meta" class="fw-meta"></div>
+          <div class="actions">
+            <button type="button" class="btn primary big" id="btn-flash" data-action="startDFU" disabled>Start flashing</button>
+            <button type="button" class="btn ghost" data-action="clearFirmware">Clear</button>
+          </div>
+        </div>
+        <div id="fw-progress" class="progress-wrap" hidden>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="fw-bar"></div></div>
+          <div class="progress-meta">
+            <b id="fw-pct">0%</b><span id="fw-blocks"></span><span id="fw-speed"></span><span id="fw-eta"></span>
+            <button type="button" class="btn small danger only-flashing" data-action="abortOta">Abort</button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">Based on pvvx's <a href="https://pvvx.github.io/ATC_MiThermometer/TelinkOTA.html" target="_blank" rel="noopener">TelinkOTA</a>.</footer>
+    </div>
+
+    <aside class="col-log" aria-labelledby="h-log">
+      <section class="card log-card">
+        <div class="card-head">
+          <h2 id="h-log">Log <span class="count" id="log-count">0</span></h2>
+          <div class="log-tools">
+            <label class="check small"><input type="checkbox" id="log-verbose"><span>Verbose</span></label>
+            <button type="button" class="btn small ghost" data-action="copyLog">Copy</button>
+            <button type="button" class="btn small ghost" data-action="downloadLog">Save</button>
+            <button type="button" class="btn small ghost" data-action="clearLog">Clear</button>
+          </div>
+        </div>
+        <div id="log" class="log hide-debug"><div id="log-list" class="log-list" role="log" aria-live="polite"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog" class="dialog-inner">
+      <h3 id="dialog-title"></h3>
+      <div id="dialog-body"></div>
+      <div class="actions end">
+        <button type="button" class="btn" id="dialog-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="dialog-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>

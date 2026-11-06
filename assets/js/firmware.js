@@ -107,6 +107,9 @@ export function appendSignature(fw, signBuffer) {
   return concatBytes(...parts);
 }
 
+/** Telink "KNLT" signature at offset 8 (the only check pvvx's OTA / UART pages made). */
+export const hasTelinkMagic = (u8) => u8.length >= 16 && u8[8] === 0x4b && u8[9] === 0x4e && u8[10] === 0x4c && u8[11] === 0x54;
+
 /** Pad to a multiple of 16 bytes with 0xFF (OTA block size). */
 export function padTo16(u8) {
   const rem = u8.length % 16;

@@ -23,10 +23,12 @@ export function describeOtaResult(code, seconds) {
 
 /**
  * Run an OTA transfer.
- * opts: { otaChar, data (Uint8Array, multiple of 16), speedChar?, onProgress?(info), signal? }
+ * opts: { otaChar, data (Uint8Array, multiple of 16), speedChar?, onProgress?(info), signal?,
+ *         checkStatus (default true): stop when the status byte read every 8 blocks is non-zero.
+ *         The generic SDK OTA page reads it but ignores the value, like pvvx's TelinkOTA.html. }
  * Resolves with { seconds } or rejects with OtaError / abort / GATT errors.
  */
-export async function runOta({ otaChar, data, speedChar = null, onProgress = () => {}, signal = null }) {
+export async function runOta({ otaChar, data, speedChar = null, onProgress = () => {}, signal = null, checkStatus = true }) {
   const blockCount = data.length / 16;
   const write = (bytes) => otaChar.writeValue(bytes);
   const checkAbort = () => {
@@ -50,7 +52,7 @@ export async function runOta({ otaChar, data, speedChar = null, onProgress = () 
     await write(otaPacket(data, i));
     if ((i + 1) % 8 === 0) {
       const result = await otaChar.readValue();
-      if (result.byteLength > 0) {
+      if (checkStatus && result.byteLength > 0) {
         const e = result.getUint8(0);
         if (e !== 0) {
           const seconds = (performance.now() - start) / 1000;
