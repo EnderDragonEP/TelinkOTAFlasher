@@ -273,3 +273,30 @@ export function bindDelegation(root, onCommand, onError) {
     }
   });
 }
+
+/** File picker + drag & drop on a drop zone; calls onFile(File). */
+export function bindFileDrop(drop, input, onFile) {
+  input.addEventListener('change', () => {
+    if (input.files[0]) onFile(input.files[0]);
+  });
+  const stop = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+  for (const t of ['dragenter', 'dragover']) {
+    drop.addEventListener(t, (ev) => {
+      stop(ev);
+      drop.classList.add('dragging');
+    });
+  }
+  for (const t of ['dragleave', 'drop']) {
+    drop.addEventListener(t, (ev) => {
+      stop(ev);
+      drop.classList.remove('dragging');
+    });
+  }
+  drop.addEventListener('drop', (ev) => {
+    const file = ev.dataTransfer && ev.dataTransfer.files[0];
+    if (file) onFile(file);
+  });
+}

@@ -3,10 +3,11 @@
 import { S } from './state.js';
 import { SOURCES } from './config.js';
 import { log } from './log.js';
-import { $, html, render, setStatus, setBadge, confirmDialog, alertDialog, toast } from './ui.js';
-import { hex, formatBytes, formatDuration } from './util.js';
+import { $, html, render, setStatus, setBadge, confirmDialog, alertDialog, toast, bindFileDrop } from './ui.js';
+import { hex, formatBytes } from './util.js';
 import { validateOtaImage, appendSignature, padTo16, fetchBinary, fetchJson, isValidEntry, resolveFirmwareUrl, firmwareFileName } from './firmware.js';
 import { runOta, describeOtaResult, OtaError } from './ota.js';
+import { setBusy, showProgress, progressState } from './progress.js';
 import { writeChar } from './ble.js';
 import { hwName } from './custom.js';
 
@@ -371,45 +372,6 @@ export function onExtOtaStatus(e, faddr, fszk) {
   }
 }
 
-let wakeLock = null;
-const beforeUnload = (ev) => {
-  ev.preventDefault();
-  ev.returnValue = '';
-};
-
-async function holdWakeLock(on) {
-  try {
-    if (on && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-    else if (!on && wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
-    }
-  } catch {
-    /* not critical */
-  }
-}
-
-function showProgress(info) {
-  const wrap = $('fw-progress');
-  if (!wrap) return;
-  wrap.hidden = false;
-  const pct = info ? Math.floor((info.block / info.blockCount) * 100) : 0;
-  $('fw-bar').style.width = pct + '%';
-  $('fw-bar').parentElement.setAttribute('aria-valuenow', String(pct));
-  $('fw-pct').textContent = pct + '%';
-  if (info) {
-    const speed = info.elapsed > 0 ? info.bytes / info.elapsed : 0;
-    const remain = speed > 0 ? (info.blockCount * 16 - info.bytes) / speed : NaN;
-    $('fw-blocks').textContent = `block ${info.block} / ${info.blockCount}`;
-    $('fw-speed').textContent = speed ? `${(speed / 1024).toFixed(1)} KiB/s` : '';
-    $('fw-eta').textContent = `elapsed ${formatDuration(info.elapsed)} · left ${formatDuration(remain)}`;
-  } else {
-    $('fw-blocks').textContent = 'starting…';
-    $('fw-speed').textContent = '';
-    $('fw-eta').textContent = '';
-  }
-}
-
 export async function beginOta() {
   const fw = S.fw;
   if (!fw || fw.blockCount <= 0) {
@@ -428,12 +390,10 @@ export async function beginOta() {
   S.ota = ctrl;
   S.phase = 'flashing';
   setBadge('flashing');
-  document.body.classList.add('is-flashing');
-  window.addEventListener('beforeunload', beforeUnload);
-  holdWakeLock(true);
+  setBusy(true);
   renderFirmwarePanel();
   showProgress(null);
-  $('fw-progress').classList.remove('done', 'failed');
+  progressState('reset');
   setStatus(`Flashing ${fw.name}…`, { kind: 'busy' });
   try {
     const { seconds } = await runOta({
@@ -446,19 +406,17 @@ export async function beginOta() {
     const s = describeOtaResult(0, seconds.toFixed(2));
     log.ok(s + '. The device will now reboot.');
     setStatus(s + '. The device reboots with the new firmware.', { kind: 'ok' });
-    $('fw-progress').classList.add('done');
+    progressState('done');
     S.justFlashed = true;
     toast('Flashing finished', 'ok', 4000);
   } catch (err) {
     const s = err instanceof OtaError ? err.message : 'Update error: ' + (err.message || err);
     log.error(s);
     setStatus(s, { kind: 'error' });
-    $('fw-progress').classList.add('failed');
+    progressState('failed');
   } finally {
     S.ota = null;
-    window.removeEventListener('beforeunload', beforeUnload);
-    holdWakeLock(false);
-    document.body.classList.remove('is-flashing');
+    setBusy(false);
     if (S.phase === 'flashing') {
       S.phase = S.server && S.device && S.device.gatt.connected ? 'connected' : 'idle';
       setBadge(S.phase);
@@ -477,27 +435,5 @@ export async function abortOta() {
 // File input, drag & drop
 
 export function initFirmwareInputs() {
-  const input = $('file');
-  input.addEventListener('change', () => loadLocalFile(input.files[0]));
-  const drop = $('fw-drop');
-  const stop = (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-  };
-  ['dragenter', 'dragover'].forEach((t) =>
-    drop.addEventListener(t, (ev) => {
-      stop(ev);
-      drop.classList.add('dragging');
-    }),
-  );
-  ['dragleave', 'drop'].forEach((t) =>
-    drop.addEventListener(t, (ev) => {
-      stop(ev);
-      drop.classList.remove('dragging');
-    }),
-  );
-  drop.addEventListener('drop', (ev) => {
-    const file = ev.dataTransfer && ev.dataTransfer.files[0];
-    if (file) loadLocalFile(file);
-  });
+  bindFileDrop($('fw-drop'), $('file'), loadLocalFile);
 }
