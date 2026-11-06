@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Device Settings</title>
+  <meta name="description" content="Configure Telink BLE thermometers running pvvx custom, ATC1441 or ZigbeeTLc (BLE mode) firmware: advertising format, intervals, display, calibration, triggers and more.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f6fde">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script type="module" src="assets/js/main.js"></script>
+</head>
+<body data-page="settings">
+  <header id="site-header" class="topbar"></header>
+
+  <main class="layout">
+    <div class="col-main">
+      <div id="support-banner" class="banner" role="alert" hidden></div>
+
+      <!-- Device / connection -->
+      <section class="card" id="card-connection" aria-labelledby="h-device">
+        <div class="card-head">
+          <h2 id="h-device"><span class="step"></span> Device</h2>
+          <span id="conn-badge" class="pill">Disconnected</span>
+        </div>
+        <label class="field" for="namePrefix">
+          <span>Name filter <small>comma-separated prefixes · empty shows every device</small></span>
+          <input type="text" id="namePrefix" placeholder="e.g. ATC,LYWSD03" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="chips" id="prefix-chips" aria-label="Quick filters"></div>
+        <label class="check" title="Requires chrome://flags/#enable-experimental-web-platform-features">
+          <input type="checkbox" id="advmac">
+          <span>Read advertising data (MAC) before connecting <small class="muted">experimental, needs <code>chrome://flags/#enable-experimental-web-platform-features</code></small></span>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-connect" data-action="connect">Connect</button>
+          <button type="button" class="btn" id="btn-reconnect" data-action="reconnect" disabled>Reconnect</button>
+          <button type="button" class="btn" id="btn-disconnect" data-action="disconnect" disabled>Disconnect</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <dl id="device-info" class="device-info" hidden></dl>
+        <div id="page-hint" class="callout page-hint" hidden></div>
+        <div id="live" class="live" hidden aria-live="off"></div>
+      </section>
+
+      <!-- Firmware settings -->
+      <section class="card" id="card-device" aria-labelledby="h-panel" hidden>
+        <div class="card-head">
+          <h2 id="h-panel"><span class="step"></span> <span id="device-card-title">Settings</span></h2>
+        </div>
+        <div id="custcfg"></div>
+      </section>
+
+      <!-- Help -->
+      <section class="card help" aria-labelledby="h-help">
+        <details>
+          <summary><h2 id="h-help">How to use</h2></summary>
+          <ol class="howto">
+            <li><b>Connect</b> – press <i>Connect</i> and pick a thermometer running <b>pvvx custom</b>, <b>ATC1441</b> or <b>ZigbeeTLc</b> (BLE mode) firmware. Devices with stock firmware are flashed on the <a href="index.html">Flasher</a> page first.</li>
+            <li><b>Change settings</b> – the current configuration is read from the device. Edit it and press <i>Send config</i>; the device confirms by sending its new configuration back.</li>
+            <li><b>More</b> – the sections below the configuration hold the comfort zone, triggers, sensor calibration, keys &amp; security (name, MAC, PIN, bind key), the clock, the measurement history and a raw command console. Charts of the readings are on the <a href="live.html">Live data</a> and <a href="history.html">History</a> pages.</li>
+          </ol>
+          <p class="muted small">Works in Chrome, Edge and Opera (desktop and Android) over HTTPS. A device accepts one connection at a time: disconnect it in other tabs and apps before connecting here.</p>
+        </details>
+      </section>
+
+      <footer class="footer">
+        Based on <a href="https://github.com/pvvx/ATC_MiThermometer" target="_blank" rel="noopener">pvvx/ATC_MiThermometer</a> TelinkMiFlasher.
+      </footer>
+    </div>
+
+    <!-- Log -->
+    <aside class="col-log" aria-labelledby="h-log">
+      <section class="card log-card">
+        <div class="card-head">
+          <h2 id="h-log">Log <span class="count" id="log-count">0</span></h2>
+          <div class="log-tools">
+            <label class="check small" title="Show protocol details"><input type="checkbox" id="log-verbose"><span>Verbose</span></label>
+            <button type="button" class="btn small ghost" data-action="copyLog" title="Copy log">Copy</button>
+            <button type="button" class="btn small ghost" data-action="downloadLog" title="Download log">Save</button>
+            <button type="button" class="btn small ghost" data-action="clearLog" title="Clear log">Clear</button>
+          </div>
+        </div>
+        <div id="log" class="log hide-debug"><div id="log-list" class="log-list" role="log" aria-live="polite"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog" class="dialog-inner">
+      <h3 id="dialog-title"></h3>
+      <div id="dialog-body"></div>
+      <div class="actions end">
+        <button type="button" class="btn" id="dialog-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="dialog-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>

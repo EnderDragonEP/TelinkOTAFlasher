@@ -3,7 +3,7 @@
 import { S, resetConnectionState, resetServiceFlags, MAX_BLE_OTA_SIZE, MAX_EXT_OTA_SIZE } from './state.js';
 import { UUID, OPTIONAL_SERVICES, webBluetoothSupport, isUserCancel } from './ble.js';
 import { log, logLink } from './log.js';
-import { $, html, render, setStatus, setLive, setBadge, setHidden, onStatus } from './ui.js';
+import { $, html, render, setStatus, setLive, setBadge, setHidden, onStatus, setPageHint } from './ui.js';
 import { sleep, formatMac } from './util.js';
 import { describeServiceData } from './advertising.js';
 import { SOURCES } from './config.js';
@@ -59,6 +59,7 @@ function setPhase(phase) {
 
 function clearDeviceUi() {
   render('custcfg', '');
+  setPageHint(null);
   setLive(null);
   setHidden('miclock', true);
   updateButtons();
@@ -271,6 +272,11 @@ async function setup(sid) {
   const name = dev.name || '';
   const fr = () => S.devinfo.frstr || '';
 
+  if (S.page === 'settings') {
+    await setupSettings(sid);
+    return;
+  }
+
   if (!S.otaEnabled) {
     log.warn('Not found Telink OTA service!');
     S.noRetry = true; // like the original: no automatic reconnects for these devices
@@ -329,29 +335,8 @@ async function setup(sid) {
     }
     updateButtons();
     await miAction();
-  } else if (S.bthomeEnabled) {
-    fwType = 'ZigbeeTLc (BLE mode)';
-    setStatus('Detected ZBdevice', { kind: 'ok' });
-    log.info('Detected ZBdevice');
-    renderCommandPanel({ getCmd: '57', title: 'Zigbee device (BLE mode)', note: 'Reading the configuration…' });
-    updateButtons();
-    await zbdeviceAction();
-  } else if (S.customEnabled) {
-    if (S.devTest) {
-      fwType = 'Test firmware';
-      log.info('Detected Test device');
-      setStatus('Detected Test device', { kind: 'warn' });
-      renderCommandPanel({ title: 'Test firmware', link: { text: 'Generic OTA ↗', href: 'ota.html' } });
-      updateButtons();
-      await getTestCharacteristic();
-    } else {
-      fwType = S.devIdEnabled ? 'pvvx custom' : 'ATC1441 custom';
-      log.info('Detected custom Firmware');
-      setStatus('Detected custom firmware', { kind: 'ok' });
-      renderCommandPanel({ note: 'Reading the configuration…' });
-      updateButtons();
-      await customAction();
-    }
+  } else if (S.bthomeEnabled || S.customEnabled) {
+    await setupCustom();
   } else if (S.qingpingEnabled) {
     fwType = 'Stock Qingping';
     if (name.substr(0, 15) === 'Qingping Motion') await cgpr1Action();
@@ -369,6 +354,64 @@ async function setup(sid) {
     MI_PANELS.unknown();
     updateButtons();
     await miAuthorization();
+  }
+  updateButtons();
+}
+
+/** ZigbeeTLc (BLE mode), test or custom firmware: open the command channel (both pages). */
+async function setupCustom() {
+  if (S.bthomeEnabled) {
+    fwType = 'ZigbeeTLc (BLE mode)';
+    setStatus('Detected ZBdevice', { kind: 'ok' });
+    log.info('Detected ZBdevice');
+    renderCommandPanel({ getCmd: '57', title: 'Zigbee device (BLE mode)', note: 'Reading the configuration…' });
+    updateButtons();
+    await zbdeviceAction();
+  } else if (S.devTest) {
+    fwType = 'Test firmware';
+    log.info('Detected Test device');
+    setStatus('Detected Test device', { kind: 'warn' });
+    renderCommandPanel({ title: 'Test firmware', link: { text: 'Generic OTA ↗', href: 'ota.html' } });
+    updateButtons();
+    await getTestCharacteristic();
+  } else {
+    fwType = S.devIdEnabled ? 'pvvx custom' : 'ATC1441 custom';
+    log.info('Detected custom Firmware');
+    setStatus('Detected custom firmware', { kind: 'ok' });
+    renderCommandPanel({ note: 'Reading the configuration…' });
+    updateButtons();
+    await customAction();
+  }
+}
+
+/**
+ * Settings page (settings.html): classify the device exactly like the flasher does, but only
+ * open the command channel of configurable firmware; everything else is pointed to the flasher.
+ */
+async function setupSettings(sid) {
+  const configurable = S.otaEnabled && !S.miEnabled && (S.bthomeEnabled || S.customEnabled);
+  if (!S.otaEnabled) S.noRetry = true;
+  await getDevVersion();
+  if (sid !== S.session) return;
+  if (configurable) {
+    await setupCustom();
+  } else if (!S.otaEnabled && S.bthomeEnabled) {
+    fwType = 'THB (PHY62x2 BTHome)';
+    log.info('Detected THB device');
+    setStatus('Detected a THB device (PHY62x2). Use the dedicated flasher:', { kind: 'warn', link: { text: 'PHY62x2BTHome', href: SOURCES.thbFlasher } });
+  } else {
+    fwType = S.miEnabled ? 'Stock Xiaomi' : S.qingpingEnabled ? 'Stock Qingping' : 'Unknown';
+    const what = S.miEnabled ? 'the stock Xiaomi firmware' : S.qingpingEnabled ? 'the stock Qingping firmware' : 'a firmware without the custom command service';
+    log.info(`No custom firmware settings on this device (${fwType}).`);
+    setStatus('Connected — this firmware has no settings to change here.', { kind: 'warn' });
+    setPageHint(
+      html`<div class="hint-body">
+          <p>This device runs <b>${what}</b>. Use the <b>Flasher</b> to activate it or to install the custom firmware, then come back here to configure it.</p>
+          <p class="muted small">Leaving this page disconnects the device.</p>
+        </div>
+        <a class="btn" href="index.html">Open Flasher</a>`,
+      'warn',
+    );
   }
   updateButtons();
 }

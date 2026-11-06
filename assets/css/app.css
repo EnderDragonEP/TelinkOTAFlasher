@@ -339,6 +339,7 @@ small {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  counter-reset: step;
 }
 .col-log {
   position: sticky;
@@ -386,6 +387,13 @@ small {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* An empty .step is numbered automatically; hidden cards are skipped. */
+.step:empty {
+  counter-increment: step;
+}
+.step:empty::before {
+  content: counter(step);
 }
 .step {
   display: inline-grid;
@@ -784,6 +792,21 @@ select:disabled {
   align-self: center;
   font-size: 0.76rem;
   color: var(--muted);
+}
+.page-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.page-hint p {
+  margin: 0;
+}
+.hint-body {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 260px;
 }
 .miclock {
   display: flex;

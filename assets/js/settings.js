@@ -4,7 +4,7 @@
 // into collapsible sections. Field-reading commands also live here.
 import { S, HW } from './state.js';
 import { log } from './log.js';
-import { $, html, render, getVal, setVal, getChecked, setChecked, exists, toast, downloadText, confirmDialog } from './ui.js';
+import { $, html, render, getVal, setVal, getChecked, setChecked, exists, toast, downloadText, confirmDialog, setPanelTitle, setPageHint } from './ui.js';
 import { hex, dump, parseHex, le16, le32 } from './util.js';
 import { RF_TX_POWER, LCD_DIGCODE } from './tables.js';
 import { SOURCES } from './config.js';
@@ -65,12 +65,42 @@ function consoleSection(extra = '') {
   );
 }
 
+/**
+ * Flasher page (index.html): the configuration forms live on settings.html, so show a
+ * pointer there instead. Returns true when the caller should not render the forms.
+ */
+export function showSettingsLink() {
+  if (S.page !== 'flasher') return false;
+  const v = S.cfg.ver;
+  const ver = v ? ` ${v >> 4}.${v & 0x0f}` : '';
+  let what = `pvvx custom firmware${ver}`;
+  if (S.devTest) what = 'test firmware';
+  else if (S.bthomeEnabled) what = `ZigbeeTLc${ver} firmware (BLE mode)`;
+  else if (!S.devIdEnabled) what = 'ATC1441 custom firmware';
+  const tooOld = S.customEnabled && S.devIdEnabled && !S.devTest && v > 0 && v < 0x10;
+  if (tooOld) {
+    setPageHint(html`<div class="hint-body"><p>This device runs <b>${what}</b>, which is too old to configure. Flash a newer version below.</p></div>`, 'warn');
+    return true;
+  }
+  let what2 = 'Advertising format, intervals, display, calibration and the other options are';
+  if (S.devTest) what2 = 'Its command console is';
+  else if (S.bthomeEnabled) what2 = 'Display, comfort zone, calibration offsets and the measurement interval are';
+  else if (!S.devIdEnabled) what2 = 'Smiley, advertising type, units, interval and the LCD segment mapper are';
+  setPageHint(html`<div class="hint-body">
+      <p>This device runs <b>${what}</b>. ${what2} on the <b>Settings</b> page.</p>
+      <p class="muted small">Leaving this page disconnects the device; connect it again there.</p>
+    </div>
+    <a class="btn" href="settings.html">Open Settings</a>`);
+  return true;
+}
+
 /** Minimal panel shown while waiting for the configuration (and for test firmware). */
 export function renderCommandPanel({ getCmd = '55', title = 'Custom firmware', note = '', link = null } = {}) {
+  if (showSettingsLink()) return;
+  setPanelTitle(title);
   render(
     'custcfg',
     html`<div class="panel">
-      <h3 class="panel-title">${title}</h3>
       ${note ? html`<p class="muted">${note}</p>` : ''}
       <div class="actions">${btn('Get config', { cmd: getCmd })}${
         link ? html`<a class="btn ghost" href="${link.href}" target="_blank" rel="noopener">${link.text}</a>` : ''
@@ -87,6 +117,8 @@ export function renderCommandPanel({ getCmd = '55', title = 'Custom firmware', n
 
 export function CustomConfig() {
   renderFirmwarePanel();
+  if (showSettingsLink()) return;
+  setPanelTitle('Custom firmware settings');
   const cfg = S.cfg;
   const hw = S.hwverId;
   if (cfg.ver < 0x10) {
@@ -765,6 +797,8 @@ export async function SendCustomConfig() {
 
 export function zbdeviceConfig() {
   renderFirmwarePanel();
+  if (showSettingsLink()) return;
+  setPanelTitle('Zigbee device settings');
   const cfg = S.cfg;
   const screen = (cfg.services & 0x20) !== 0;
   const ths = (cfg.services & 0x80) !== 0;
@@ -1386,6 +1420,8 @@ export async function fnSensSCD4x(cmdArg) {
 // ATC1441 firmware (legacy single-byte commands + LCD segment mapper)
 
 export function renderAtc1441Panel() {
+  if (showSettingsLink()) return;
+  setPanelTitle('ATC1441 firmware');
   const c = (label, cmd) => btn(label, { cmd, kind: 'small' });
   const row = (label, items) => html`<div class="cmd-row"><span>${label}</span><div class="actions">${items}</div></div>`;
   const bytes = [0, 1, 2, 3, 4, 5].map(
@@ -1399,7 +1435,7 @@ export function renderAtc1441Panel() {
         <a href="ota.html" target="_blank" rel="noopener">Generic OTA</a>.</div>
       ${section(
         'atc',
-        'ATC1441 settings',
+        'Settings',
         html`${row('Settings', html`${c('Save current settings to flash', 'DF')}${c('Reset settings to default', 'DE')}`)}
           ${row('Smiley', html`${c('Off', 'A0')}${c('Happy', 'A1')}${c('Sad', 'A2')}${c('Blinking', 'AB')}${c('Comfort indicator', 'A3')}`)}
           ${row('Advertising type', html`${c('Custom', 'AE')}${c('Mi like', 'AF')}`)}

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Telink BLE OTA Flasher</title>
-  <meta name="description" content="Flash custom (pvvx / ATC), Zigbee or original firmware to Telink based Xiaomi, Qingping and Tuya BLE thermometers from the browser, activate Mi devices and configure the custom firmware.">
+  <meta name="description" content="Flash custom (pvvx / ATC), Zigbee or original firmware to Telink based Xiaomi, Qingping and Tuya BLE thermometers from the browser and activate Mi devices.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#0f6fde">
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -15,7 +15,7 @@
   </script>
   <script type="module" src="assets/js/main.js"></script>
 </head>
-<body>
+<body data-page="flasher">
   <header id="site-header" class="topbar"></header>
 
   <main class="layout">
@@ -25,7 +25,7 @@
       <!-- Device / connection -->
       <section class="card" id="card-connection" aria-labelledby="h-device">
         <div class="card-head">
-          <h2 id="h-device"><span class="step">1</span> Device</h2>
+          <h2 id="h-device"><span class="step"></span> Device</h2>
           <span id="conn-badge" class="pill">Disconnected</span>
         </div>
         <label class="field" for="namePrefix">
@@ -44,6 +44,7 @@
         </div>
         <div id="status" class="status" role="status" aria-live="polite"></div>
         <dl id="device-info" class="device-info" hidden></dl>
+        <div id="page-hint" class="callout page-hint" hidden></div>
         <div id="live" class="live" hidden aria-live="off"></div>
         <div id="miclock" class="miclock" hidden>
           <span>Device clock: <b id="miclk">?</b></span>
@@ -52,10 +53,18 @@
         </div>
       </section>
 
+      <!-- Device specific panel (Mi / Qingping activation) -->
+      <section class="card" id="card-device" aria-labelledby="h-panel" hidden>
+        <div class="card-head">
+          <h2 id="h-panel"><span class="step"></span> <span id="device-card-title">Mi Home activation</span></h2>
+        </div>
+        <div id="custcfg"></div>
+      </section>
+
       <!-- Firmware -->
       <section class="card" id="card-firmware" aria-labelledby="h-fw" hidden>
         <div class="card-head">
-          <h2 id="h-fw"><span class="step">2</span> Firmware</h2>
+          <h2 id="h-fw"><span class="step"></span> Firmware</h2>
           <span id="fw-index" class="muted small"></span>
         </div>
         <div id="fw-hint" class="callout callout-warn" hidden></div>
@@ -85,14 +94,6 @@
         </div>
       </section>
 
-      <!-- Device specific panel (Mi activation / custom firmware settings) -->
-      <section class="card" id="card-device" aria-labelledby="h-settings" hidden>
-        <div class="card-head">
-          <h2 id="h-settings"><span class="step">3</span> Activation &amp; settings</h2>
-        </div>
-        <div id="custcfg"></div>
-      </section>
-
       <!-- Help -->
       <section class="card help" aria-labelledby="h-help">
         <details>
@@ -101,7 +102,7 @@
             <li><b>Connect</b> – press <i>Connect</i> and pick your thermometer. Wake it up (press a button or remove/insert the battery) if it does not show up.</li>
             <li><b>Stock Xiaomi / Qingping firmware</b> – press <i>Do activation</i> first. This registers the device with this browser (as the Mi Home app would) and shows the <b>token</b> and <b>bind key</b>. Devices locked to newer stock firmware need a token from the Xiaomi cloud and <i>Login with token</i>.</li>
             <li><b>Choose a firmware</b> – load the recommended <i>Custom firmware</i> (or Zigbee / original) or a local file, then press <i>Start flashing</i>. Keep the page open and the device near the computer; it reboots when done.</li>
-            <li><b>Configure</b> – reconnect after flashing to change advertising format (BTHome, PVVX, ATC, Mi), intervals, display options, calibration and more.</li>
+            <li><b>Configure</b> – after flashing, open the <a href="settings.html">Settings</a> page and connect again to change the advertising format (BTHome, PVVX, ATC, Mi), intervals, display options, calibration and more.</li>
           </ol>
           <p class="muted small">Works in Chrome, Edge and Opera (desktop and Android) over HTTPS. A failed or aborted transfer leaves the current firmware in place; just try again. Flashing third-party firmware is at your own risk.</p>
         </details>

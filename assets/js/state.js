@@ -16,6 +16,8 @@ const defaultMikeys = () => ({ mac: null, id: null, token: null, bindkey: null, 
 const defaultExt = () => ({ big_number: 0, small_number: 0, vtime: 60, flg: 0xc7, enable: false });
 
 export const S = {
+  /** 'flasher' (index.html: activation + OTA) or 'settings' (settings.html: custom firmware configuration). */
+  page: 'flasher',
   /** Incremented for every connection attempt; stale async work compares against it. */
   session: 0,
   /** 'idle' | 'connecting' | 'connected' | 'flashing' */

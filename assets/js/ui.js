@@ -94,6 +94,21 @@ export function setStatus(text, opts = {}) {
   if (statusListener) statusListener(text);
 }
 
+/** Title of the card that hosts the device panel (#custcfg). */
+export function setPanelTitle(text) {
+  const el = $('device-card-title');
+  if (el) el.textContent = text;
+}
+
+/** Callout in the Device card pointing to the other page (Flasher <-> Settings); null hides it. */
+export function setPageHint(tpl, kind = '') {
+  const el = $('page-hint');
+  if (!el) return;
+  el.className = `callout page-hint${kind ? ` callout-${kind}` : ''}`;
+  el.hidden = !tpl;
+  render(el, tpl || '');
+}
+
 /** Live measurements: array of [label, value] pairs, or a plain string. */
 export function setLive(parts, source = '') {
   const el = $('live');

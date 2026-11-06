@@ -6,7 +6,7 @@
 import { S } from './state.js';
 import { UUID, writeChar, onNotify } from './ble.js';
 import { log } from './log.js';
-import { $, html, render, setStatus, setLive, getVal, setVal, confirmDialog, toast, copyText, downloadText, setHidden } from './ui.js';
+import { $, html, render, setStatus, setLive, getVal, setVal, confirmDialog, toast, copyText, downloadText, setHidden, setPanelTitle } from './ui.js';
 import { bytesToHex, hexToBytes, hex2ascii, parseHex } from './util.js';
 import { hkdfSha256, hmacSha256, aesCcmEncrypt, ecdhGenerate, ecdhSharedSecret } from './crypto.js';
 import { SOURCES } from './config.js';
@@ -24,11 +24,11 @@ const ACTIVATION_NOTE = 'After activating here, the device has to be activated a
  * opts: { intro?, warning?: html, register?, skip?, login?, extra?: html }
  */
 export function renderMiPanel({ intro = ACTIVATION_NOTE, hint = null, warning = null, register = true, skip = false, login = true, extra = null } = {}) {
+  setPanelTitle('Mi Home activation');
   render(
     'custcfg',
     html`
       <div class="panel">
-        <h3 class="panel-title">Mi Home activation</h3>
         ${warning ? html`<div class="callout callout-warn">${warning}</div>` : ''}
         ${intro ? html`<p class="muted">${intro}</p>` : ''}
         ${hint ? html`<p class="callout">${hint}</p>` : ''}
@@ -450,6 +450,7 @@ export async function keyMiLogin() {
 
 export function skipActivation() {
   if (S.cus017 && S.qingpingEnabled) {
+    setPanelTitle('Qingping CGPR1');
     render('custcfg', qingpingExtraTemplate());
   } else {
     render('custcfg', '');

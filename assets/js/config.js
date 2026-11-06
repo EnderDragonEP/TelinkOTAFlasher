@@ -26,6 +26,7 @@ export const SOURCES = {
 /** Pages of this site (shared top navigation). */
 export const NAV = [
   { id: 'flasher', href: 'index.html', label: 'Flasher', title: 'Flash firmware, activate and configure devices' },
+  { id: 'settings', href: 'settings.html', label: 'Settings', title: 'Configure devices running pvvx custom, ATC1441 or ZigbeeTLc (BLE mode) firmware' },
   { id: 'live', href: 'live.html', label: 'Live data', title: 'Live temperature / humidity chart' },
   { id: 'history', href: 'history.html', label: 'History', title: 'Read the measurement history stored on the device' },
   { id: 'ota', href: 'ota.html', label: 'OTA', title: 'Generic Telink BLE OTA with custom UUIDs' },

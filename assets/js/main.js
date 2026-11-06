@@ -1,4 +1,5 @@
-// Flasher page entry point: wires index.html to the modules.
+// Entry point of the two device pages that share the connection code:
+// index.html (data-page="flasher": activation + OTA) and settings.html (data-page="settings").
 import { APP } from './config.js';
 import { S } from './state.js';
 import { log } from './log.js';
@@ -75,16 +76,19 @@ const actions = {
 };
 
 function init() {
-  const supported = initSite({ page: 'flasher', needs: 'bluetooth', onCommand: sendCustomSetting, actions });
-  initFirmwareInputs();
-  // The "Activation & settings" card is visible whenever a device panel is rendered.
+  S.page = document.body.dataset.page === 'settings' ? 'settings' : 'flasher';
+  const supported = initSite({ page: S.page, needs: 'bluetooth', onCommand: sendCustomSetting, actions });
+  if (S.page === 'flasher') initFirmwareInputs();
+  // The device panel card (Mi activation / settings) is visible whenever a panel is rendered.
   const panel = $('custcfg');
   new MutationObserver(() => ($('card-device').hidden = !panel.hasChildNodes())).observe(panel, { childList: true });
   updateButtons();
   if (!supported) $('btn-connect').disabled = true;
   setStatus('Waiting for you to connect a device.');
-  log.info(`${APP.name} v${APP.version} (based on ${APP.basedOn})`);
-  loadIndexes();
+  if (S.page === 'flasher') {
+    log.info(`${APP.name} v${APP.version} (based on ${APP.basedOn})`);
+    loadIndexes();
+  }
   // Expose state for debugging from the console.
   window.flasher = { S, log };
 }
