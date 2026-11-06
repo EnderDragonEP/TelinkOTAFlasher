@@ -6,8 +6,21 @@ many more). It is a rewrite of pvvx's
 [TelinkMiFlasher](https://pvvx.github.io/ATC_MiThermometer/TelinkMiFlasher.html) with a modern
 interface.
 
-Everything runs in the browser over Web Bluetooth. There is no build step, and it deploys as a
-static site to GitHub Pages.
+Everything runs in the browser over Web Bluetooth (and Web Serial for the wired flasher). There
+is no build step, and it deploys as a static site to GitHub Pages.
+
+## Pages
+
+| Page | What it does | Replaces pvvx's |
+| --- | --- | --- |
+| **Flasher** (`index.html`) | OTA flashing, Mi activation / login, custom firmware settings | TelinkMiFlasher |
+| **Live data** (`live.html`) | live temperature, humidity, dew point and battery charts, CSV export; can show the dew point on the device screen | GraphAtc 1–3, DevPoint |
+| **History** (`history.html`) | reads the measurement log stored on the device (custom firmware, or the hourly log of stock LYWSD03MMC), charts, min/avg/max and CSV | GraphMemo, GraphMemoOriginal |
+| **OTA** (`ota.html`) | generic Telink SDK OTA with configurable service / characteristic UUIDs | TelinkOTA |
+| **UART flasher** (`uart.html`) | wired flashing / recovery through a USB-UART adapter on the SWS pin (TLSR825x and TLSR8266/8269) | USBCOMFlashTx, USBCOMFlashTx8269 |
+
+pvvx's remaining tools (advertising decoder, ZigbeeTLc index OTA, debug flash reader, power
+measurements) are linked from the **More** menu.
 
 ## Features
 
@@ -22,9 +35,9 @@ static site to GitHub Pages.
   and a raw command console. ZigbeeTLc (BLE mode), ATC1441 and Qingping devices are supported too.
 - Light and dark themes, phone-friendly layout, and an exportable log with an optional verbose mode.
 
-The Bluetooth protocol code is a faithful port of the original page. It was verified with a
-simulated device to send byte-identical GATT traffic in 16 scenarios, including activation,
-login, configuration and complete OTA transfers.
+The protocol code is a faithful port of the original pages. It was verified against them with a
+simulated device and USB-UART adapter: byte-identical GATT and serial traffic, including
+activation, login, configuration, history reading and complete OTA / UART transfers.
 
 ## Use
 
@@ -60,12 +73,19 @@ Web Bluetooth needs a secure context; `http://localhost` qualifies.
 
 | Path | Contents |
 | --- | --- |
-| `index.html`, `assets/css/app.css` | page and styles |
+| `index.html`, `live.html`, `history.html`, `ota.html`, `uart.html` | pages |
+| `assets/css/app.css` | styles (light / dark themes) |
+| `assets/js/site.js` | shared header, navigation, theme, log and name filter |
+| `assets/js/pages/` | entry modules of the tool pages |
 | `assets/js/connection.js` | device chooser, service discovery, retries |
 | `assets/js/mi.js` | Mi activation / login protocol |
 | `assets/js/custom.js`, `settings.js` | custom firmware protocol and settings UI |
-| `assets/js/firmware.js`, `ota.js`, `flasher.js` | image validation, signing, OTA transfer, firmware card |
-| `tests/` | unit tests (crypto vectors, firmware validation, advertising decoders) |
+| `assets/js/firmware.js`, `ota.js`, `flasher.js`, `progress.js` | image validation, signing, OTA transfer, firmware card, progress |
+| `assets/js/ble-session.js` | small connection helper for the tool pages |
+| `assets/js/measure.js`, `chart.js` | measurement parsing, dew point, CSV; charts (uPlot) |
+| `assets/js/swire.js` | SWire-over-UART encoding and flash programming |
+| `assets/vendor/uplot/` | [uPlot](https://github.com/leeoniya/uPlot) 1.6.32 (MIT), served locally |
+| `tests/` | unit tests (crypto vectors, firmware validation, advertising decoders, SWire encoding, parsers) |
 
 ## Credits
 
@@ -73,6 +93,7 @@ Web Bluetooth needs a secure context; `http://localhost` qualifies.
   original TelinkMiFlasher this is based on.
 - [atc1441/ATC_MiThermometer](https://github.com/atc1441/ATC_MiThermometer): the original custom
   firmware and flasher.
+- [leeoniya/uPlot](https://github.com/leeoniya/uPlot): the chart library (MIT).
 - [PiotrMachowski/Xiaomi-cloud-tokens-extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor):
   the tool for reading device tokens from a Xiaomi account.
 
