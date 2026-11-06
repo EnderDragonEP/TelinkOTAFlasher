@@ -108,7 +108,10 @@ const CRC32_TABLE = (() => {
   return table;
 })();
 
-/** Standard CRC-32 (IEEE 802.3), unsigned result. */
+/**
+ * CRC-32 (reflected, poly 0xEDB88320, init 0xFFFFFFFF) WITHOUT the final XOR, i.e. CRC-32/JAMCRC.
+ * This is what the Telink OTA image check (and the original page) uses.
+ */
 export function crc32(data) {
   const u8 = toU8(data);
   let crc = -1;
