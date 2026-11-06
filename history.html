@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Measurement History</title>
+  <meta name="description" content="Read and chart the measurement history stored in Telink BLE thermometers (pvvx custom firmware or stock Xiaomi LYWSD03MMC) and export it as CSV.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f6fde">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/vendor/uplot/uPlot.min.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script defer src="assets/vendor/uplot/uPlot.iife.min.js"></script>
+  <script type="module" src="assets/js/pages/history.js"></script>
+</head>
+<body>
+  <header id="site-header" class="topbar"></header>
+
+  <main class="layout">
+    <div class="col-main">
+      <div id="support-banner" class="banner" role="alert" hidden></div>
+
+      <section class="card" aria-labelledby="h-dev">
+        <div class="card-head">
+          <h2 id="h-dev">Measurement history</h2>
+          <span id="conn-badge" class="pill">Disconnected</span>
+        </div>
+        <p class="muted small">Reads the averaged measurements stored in the device's flash: pvvx custom firmware (enable “Store averaged measurements”
+          in the Flasher's configuration) or the hourly minimum/maximum log of the stock Xiaomi LYWSD03MMC firmware.</p>
+        <label class="field" for="namePrefix">
+          <span>Name filter <small>comma-separated prefixes · empty shows every device</small></span>
+          <input type="text" id="namePrefix" placeholder="e.g. ATC,LYWSD03" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="chips" id="prefix-chips" aria-label="Quick filters"></div>
+        <div class="form-grid">
+          <label class="field"><span>Number of records <small>custom firmware</small></span>
+            <input type="text" id="LoadSamples" inputmode="numeric" placeholder="All" autocomplete="off"></label>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="setDevTime" checked><span>Set the device clock after reading <small class="muted">(custom firmware)</small></span></label>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-connect" data-action="connect">Connect &amp; read</button>
+          <button type="button" class="btn" id="btn-disconnect" data-action="disconnect" disabled>Stop / disconnect</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <div id="fw-progress" class="progress-wrap" hidden>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="fw-bar"></div></div>
+          <div class="progress-meta"><b id="fw-pct">0%</b><span id="fw-blocks"></span><span id="fw-speed"></span><span id="fw-eta"></span></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-chart">
+        <div class="card-head">
+          <h2 id="h-chart">Chart <span class="count" id="sample-count">0</span></h2>
+          <div class="actions">
+            <button type="button" class="btn small" data-action="resetZoom">Reset zoom</button>
+            <button type="button" class="btn small" data-action="downloadCsv">Download .csv</button>
+          </div>
+        </div>
+        <div class="checks chart-options">
+          <label class="check small"><input type="checkbox" id="hideLoDate" checked><span>Hide records dated before 2021 (clock not set)</span></label>
+        </div>
+        <div id="stats"></div>
+        <div id="charts"></div>
+        <p class="muted small">Drag across a chart to zoom in; double-click to zoom out. Times are shown in this computer's time zone.</p>
+      </section>
+
+      <footer class="footer">Based on pvvx's GraphMemo and GraphMemoOriginal pages.</footer>
+    </div>
+
+    <aside class="col-log" aria-labelledby="h-log">
+      <section class="card log-card">
+        <div class="card-head">
+          <h2 id="h-log">Log <span class="count" id="log-count">0</span></h2>
+          <div class="log-tools">
+            <label class="check small"><input type="checkbox" id="log-verbose"><span>Verbose</span></label>
+            <button type="button" class="btn small ghost" data-action="copyLog">Copy</button>
+            <button type="button" class="btn small ghost" data-action="downloadLog">Save</button>
+            <button type="button" class="btn small ghost" data-action="clearLog">Clear</button>
+          </div>
+        </div>
+        <div id="log" class="log hide-debug"><div id="log-list" class="log-list" role="log" aria-live="polite"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog" class="dialog-inner">
+      <h3 id="dialog-title"></h3>
+      <div id="dialog-body"></div>
+      <div class="actions end">
+        <button type="button" class="btn" id="dialog-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="dialog-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>
